@@ -1,67 +1,207 @@
 import { useEffect, useState } from 'react';
-import { StyleSheet, Button, ActivityIndicator, SafeAreaView, View, Text, Pressable } from 'react-native';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
+import {
+  StyleSheet,
+  ActivityIndicator,
+  SafeAreaView,
+  View,
+  Text,
+  Pressable,
+  ScrollView,
+  RefreshControl,
+} from 'react-native';
 import { useAuth } from '../../lib/auth';
 import { api } from '../../lib/api';
 import { Colors, Fonts } from '../../constants/cognify-theme';
 import { FontAwesome } from '@expo/vector-icons';
-
-interface Motivation {
-  quote: string;
-  author: string;
-}
+import { router } from 'expo-router';
+import type { Motivation, StudentAnalytics, Recommendation } from '../../lib/types';
 
 export default function HomeScreen() {
   const { user } = useAuth();
   const [motivation, setMotivation] = useState<Motivation | null>(null);
+  const [analytics, setAnalytics] = useState<StudentAnalytics | null>(null);
+  const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
-  const fetchMotivation = async () => { /* ... (no changes to this function) ... */ };
-  const generateNewMotivation = async () => { /* ... (no changes to this function) ... */ };
-  
-  // Omitted fetch/generate functions for brevity, copy them from your existing file
-  
-  // ... useEffect(() => { ... }, [user]); 
+  const fetchDashboardData = async () => {
+    if (!user?.id) return;
+    
+    try {
+      const [motivationRes, analyticsRes, recsRes] = await Promise.all([
+        api.get(`/utilities/motivation/${user.id}`),
+        api.get(`/analytics/student_report/${user.id}`),
+        api.get('/recommendations/', { params: { limit: 3 } }),
+      ]);
+
+      setMotivation(motivationRes.data);
+      setAnalytics(analyticsRes.data);
+      setRecommendations(recsRes.data.items || []);
+    } catch (error: any) {
+      console.error('Failed to load dashboard:', error.response?.data || error.message);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  const generateNewMotivation = async () => {
+    if (!user?.id) return;
+    
+    try {
+      setLoading(true);
+      const { data } = await api.post(`/utilities/motivation/generate/${user.id}`);
+      setMotivation(data);
+    } catch (error: any) {
+      console.error('Failed to generate motivation:', error.response?.data || error.message);
+      alert('Failed to generate new quote. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    fetchDashboardData();
+  };
+
+  useEffect(() => {
+    fetchDashboardData();
+  }, [user]);
+
+  if (loading && !refreshing) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.centered}>
+          <ActivityIndicator size="large" color={Colors.primary} />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  const passPercentage = analytics?.prediction?.pass_probability || 0;
+  const isPassing = analytics?.prediction?.predicted_to_pass || false;
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <View style={styles.container}>
+      <ScrollView
+        style={styles.container}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }>
+        {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.headerHi}>Hi, {user?.first_name || 'Student'}</Text>
-          <Text style={styles.headerTitle}>Study Plan</Text>
+          <Text style={styles.headerHi}>Hi, {user?.first_name || 'Student'}! 👋</Text>
+          <Text style={styles.headerTitle}>Your Study Dashboard</Text>
         </View>
 
-        {/* This card shows the user's motivation */}
+        {/* Motivation Card */}
         <View style={styles.card}>
-          {loading ? (
-            <ActivityIndicator color={Colors.primary} />
-          ) : (
+          <View style={styles.cardHeader}>
+            <FontAwesome name="quote-left" size={16} color={Colors.primary} />
+            <Text style={styles.cardTitle}>Daily Motivation</Text>
+          </View>
+          <Text style={styles.quoteText}>"{motivation?.quote || 'Loading...'}"</Text>
+          <Text style={styles.authorText}>— {motivation?.author || '...'}</Text>
+          <Pressable style={styles.refreshButton} onPress={generateNewMotivation}>
+            <FontAwesome name="refresh" size={14} color={Colors.primary} />
+            <Text style={styles.refreshButtonText}>Get New Quote</Text>
+          </Pressable>
+        </View>
+
+        {/* Performance Summary Card */}
+        <View style={styles.card}>
+          <View style={styles.cardHeader}>
+            <FontAwesome name="bar-chart" size={16} color={Colors.primary} />
+            <Text style={styles.cardTitle}>Performance Summary</Text>
+          </View>
+          
+          {analytics ? (
             <>
-              <Text style={styles.locationText}>{motivation?.quote || "Loading..."}</Text>
+              <View style={styles.statRow}>
+                <Text style={styles.statLabel}>Overall Score:</Text>
+                <Text style={styles.statValue}>
+                  {analytics.summary.overall_score.toFixed(1)}%
+                </Text>
+              </View>
+              
+              <View style={styles.statRow}>
+                <Text style={styles.statLabel}>Activities Completed:</Text>
+                <Text style={styles.statValue}>{analytics.summary.total_activities}</Text>
+              </View>
+              
+              <View style={styles.statRow}>
+                <Text style={styles.statLabel}>Time Spent:</Text>
+                <Text style={styles.statValue}>
+                  {Math.floor(analytics.summary.time_spent_sec / 3600)}h {Math.floor((analytics.summary.time_spent_sec % 3600) / 60)}m
+                </Text>
+              </View>
+
               <View style={styles.divider} />
-              <Text style={styles.locationText}>{motivation?.author || "..."}</Text>
+
+              <View style={styles.predictionRow}>
+                <FontAwesome
+                  name={isPassing ? 'check-circle' : 'exclamation-circle'}
+                  size={20}
+                  color={isPassing ? '#4CAF50' : '#FF9800'}
+                />
+                <Text style={[styles.predictionText, { color: isPassing ? '#4CAF50' : '#FF9800' }]}>
+                  {isPassing ? 'On Track to Pass' : 'Needs Improvement'}
+                </Text>
+              </View>
+              <Text style={styles.predictionDetail}>
+                Pass Probability: {passPercentage.toFixed(1)}%
+              </Text>
             </>
+          ) : (
+            <Text style={styles.emptyText}>No performance data yet. Start studying!</Text>
           )}
         </View>
 
-        {/* This card is just for show, as in the design */}
-        <View style={styles.card}>
-          <View style={styles.row}>
-            <Text style={styles.rowLabel}>Progress</Text>
-            <Text style={styles.rowValue}>4 modules</Text>
+        {/* Recommendations Card */}
+        {recommendations.length > 0 && (
+          <View style={styles.card}>
+            <View style={styles.cardHeader}>
+              <FontAwesome name="lightbulb-o" size={16} color={Colors.primary} />
+              <Text style={styles.cardTitle}>Recommended for You</Text>
+            </View>
+            
+            {recommendations.map((rec, index) => (
+              <View key={rec.id} style={styles.recItem}>
+                <Text style={styles.recTopic}>{rec.recommended_topic}</Text>
+                <Text style={styles.recReason}>{rec.reason}</Text>
+                <Pressable
+                  style={styles.recButton}
+                  onPress={() => {
+                    if (rec.recommended_module) {
+                      router.push(`/(app)/module/${rec.recommended_module}` as any);
+                    }
+                  }}>
+                  <Text style={styles.recButtonText}>Start Studying</Text>
+                  <FontAwesome name="arrow-right" size={12} color={Colors.primary} />
+                </Pressable>
+              </View>
+            ))}
           </View>
-          <View style={styles.divider} />
-          <View style={styles.row}>
-            <Text style={styles.rowLabel}>Next Up</Text>
-            <Text style={styles.rowValue}>Theories of Personality</Text>
-          </View>
-        </View>
+        )}
 
-        <Pressable style={styles.searchButton} onPress={generateNewMotivation}>
-          <Text style={styles.searchButtonText}>GET NEW QUOTE</Text>
-        </Pressable>
-      </View>
+        {/* Quick Actions */}
+        <View style={styles.actionsContainer}>
+          <Pressable
+            style={styles.actionButton}
+            onPress={() => router.push('/(app)/subjects')}>
+            <FontAwesome name="book" size={24} color={Colors.white} />
+            <Text style={styles.actionButtonText}>Browse Modules</Text>
+          </Pressable>
+
+          <Pressable
+            style={styles.actionButton}
+            onPress={() => router.push('/(app)/assessments')}>
+            <FontAwesome name="pencil" size={24} color={Colors.white} />
+            <Text style={styles.actionButtonText}>Take Assessment</Text>
+          </Pressable>
+        </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -73,10 +213,15 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
-    padding: 24,
+  },
+  centered: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   header: {
-    marginBottom: 20,
+    padding: 24,
+    paddingTop: 16,
   },
   headerHi: {
     fontFamily: Fonts.regular,
@@ -85,58 +230,155 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontFamily: Fonts.bold,
-    fontSize: 32,
+    fontSize: 28,
     color: Colors.text,
+    marginTop: 4,
   },
   card: {
     backgroundColor: Colors.white,
-    borderRadius: 20,
+    borderRadius: 16,
     padding: 20,
-    marginBottom: 20,
+    marginHorizontal: 24,
+    marginBottom: 16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 5,
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
     elevation: 3,
   },
-  locationText: {
+  cardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  cardTitle: {
     fontFamily: Fonts.semiBold,
     fontSize: 16,
     color: Colors.text,
-    paddingVertical: 10,
+    marginLeft: 8,
+  },
+  quoteText: {
+    fontFamily: Fonts.regular,
+    fontSize: 15,
+    color: Colors.text,
+    lineHeight: 22,
+    fontStyle: 'italic',
+    marginBottom: 8,
+  },
+  authorText: {
+    fontFamily: Fonts.semiBold,
+    fontSize: 14,
+    color: Colors.textLight,
+    marginBottom: 12,
+  },
+  refreshButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    backgroundColor: Colors.background,
+  },
+  refreshButtonText: {
+    fontFamily: Fonts.semiBold,
+    fontSize: 13,
+    color: Colors.primary,
+    marginLeft: 6,
+  },
+  statRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  statLabel: {
+    fontFamily: Fonts.regular,
+    fontSize: 15,
+    color: Colors.textLight,
+  },
+  statValue: {
+    fontFamily: Fonts.semiBold,
+    fontSize: 15,
+    color: Colors.text,
   },
   divider: {
     height: 1,
     backgroundColor: '#EAEAEA',
-    marginVertical: 10,
+    marginVertical: 12,
   },
-  row: {
+  predictionRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 10,
+    marginBottom: 6,
   },
-  rowLabel: {
-    fontFamily: Fonts.regular,
-    fontSize: 16,
-    color: Colors.textLight,
-  },
-  rowValue: {
+  predictionText: {
     fontFamily: Fonts.semiBold,
     fontSize: 16,
+    marginLeft: 8,
+  },
+  predictionDetail: {
+    fontFamily: Fonts.regular,
+    fontSize: 14,
+    color: Colors.textLight,
+    marginLeft: 28,
+  },
+  emptyText: {
+    fontFamily: Fonts.regular,
+    fontSize: 14,
+    color: Colors.textLight,
+    textAlign: 'center',
+    paddingVertical: 16,
+  },
+  recItem: {
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#EAEAEA',
+  },
+  recTopic: {
+    fontFamily: Fonts.semiBold,
+    fontSize: 15,
     color: Colors.text,
+    marginBottom: 4,
   },
-  searchButton: {
-    backgroundColor: Colors.primary,
-    height: 50,
-    borderRadius: 15,
-    justifyContent: 'center',
+  recReason: {
+    fontFamily: Fonts.regular,
+    fontSize: 13,
+    color: Colors.textLight,
+    marginBottom: 8,
+  },
+  recButton: {
+    flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 10,
+    alignSelf: 'flex-start',
   },
-  searchButtonText: {
-    fontFamily: Fonts.bold,
-    fontSize: 16,
+  recButtonText: {
+    fontFamily: Fonts.semiBold,
+    fontSize: 13,
+    color: Colors.primary,
+    marginRight: 6,
+  },
+  actionsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: 24,
+    paddingBottom: 24,
+    gap: 12,
+  },
+  actionButton: {
+    flex: 1,
+    backgroundColor: Colors.primary,
+    borderRadius: 16,
+    padding: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 100,
+  },
+  actionButtonText: {
+    fontFamily: Fonts.semiBold,
+    fontSize: 14,
     color: Colors.white,
+    marginTop: 8,
+    textAlign: 'center',
   },
 });
