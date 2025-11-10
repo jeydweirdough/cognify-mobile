@@ -13,9 +13,13 @@ import { Stack, useLocalSearchParams, router } from 'expo-router';
 import { Colors, Fonts } from '../../constants/cognify-theme';
 import { FontAwesome } from '@expo/vector-icons';
 import type { GeneratedQuiz, GeneratedQuestion } from '../../lib/types';
+// --- FIX: Import useAuth to get user ID ---
+import { useAuth } from '../../lib/auth';
 
 export default function QuizScreen() {
   const { quizId, moduleId } = useLocalSearchParams<{ quizId: string; moduleId: string }>();
+  // --- FIX: Get user from auth context ---
+  const { user } = useAuth();
   const [quiz, setQuiz] = useState<GeneratedQuiz | null>(null);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [selectedAnswers, setSelectedAnswers] = useState<Record<number, string>>({});
@@ -29,10 +33,10 @@ export default function QuizScreen() {
 
   const fetchQuiz = async () => {
     try {
-      // We need to get the quiz from the paginated endpoint
-      const { data } = await api.get(`/generate/generated_quizzes/for_module/${moduleId}`);
-      const foundQuiz = data.items.find((q: GeneratedQuiz) => q.id === quizId);
-      setQuiz(foundQuiz || null);
+      // --- FIX: Fetch the quiz directly by its ID ---
+      const { data } = await api.get<GeneratedQuiz>(`/generate/generated_quizzes/${quizId}`);
+      setQuiz(data);
+      // --- END FIX ---
     } catch (error: any) {
       console.error('Failed to fetch quiz:', error.response?.data || error.message);
       Alert.alert('Error', 'Failed to load quiz');
@@ -61,12 +65,12 @@ export default function QuizScreen() {
 
   const handlePrevious = () => {
     if (currentQuestionIndex > 0) {
-      setCurrentQuestionIndex(currentQuestionIndex - 1);
+      setCurrentQuestionIndex(currentQuestionIndex + 1);
     }
   };
 
   const handleSubmit = async () => {
-    if (!quiz) return;
+    if (!quiz || !user) return; // --- FIX: Check for user ---
 
     // Calculate score
     let correctCount = 0;
@@ -80,8 +84,9 @@ export default function QuizScreen() {
     
     try {
       // Log activity to backend
+      // --- FIX: Add the user's ID to the payload ---
       await api.post('/activities/', {
-        user_id: '', // Will be filled by backend from token
+        user_id: user.id, // <-- This is the fix
         subject_id: quiz.subject_id,
         activity_type: 'quiz',
         activity_ref: quiz.id,
@@ -91,6 +96,7 @@ export default function QuizScreen() {
         duration: 0, // You could track actual duration
         timestamp: new Date().toISOString(),
       });
+      // --- END FIX ---
     } catch (error: any) {
       console.error('Failed to log activity:', error.response?.data || error.message);
     }
@@ -272,6 +278,7 @@ export default function QuizScreen() {
   );
 }
 
+// ... styles remain unchanged
 const styles = StyleSheet.create({
   container: {
     flex: 1,

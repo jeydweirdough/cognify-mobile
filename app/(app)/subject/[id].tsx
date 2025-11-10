@@ -40,20 +40,18 @@ export default function SubjectModulesScreen() {
 
   const fetchData = async () => {
     try {
-      // Get all modules and filter by subject_id on the client
-      // (Backend doesn't have /modules/by_subject/{id} endpoint)
+      // --- FIX: Use the new, efficient backend endpoint ---
       const [subjectRes, modulesRes] = await Promise.all([
         api.get<Subject>(`/subjects/${id}`),
-        api.get<PaginatedResponse<Module>>('/modules/', { params: { limit: 100 } }),
+        api.get<PaginatedResponse<Module>>(`/modules/by_subject/${id}`, { 
+          params: { limit: 100 } 
+        }),
       ]);
 
       setSubject(subjectRes.data);
-      
-      // Filter modules for this subject
-      const filteredModules = modulesRes.data.items.filter(
-        (mod) => mod.subject_id === id
-      );
-      setModules(filteredModules);
+      setModules(modulesRes.data.items || []); // No client-side filtering needed!
+      // --- END FIX ---
+
     } catch (error: any) {
       console.error('Failed to fetch data:', error.response?.data || error.message);
     } finally {

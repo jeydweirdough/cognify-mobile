@@ -164,18 +164,23 @@ export interface Activity {
   created_at?: string;
 }
 
+// --- FIX: This is now the one-and-only Recommendation type ---
 export interface Recommendation {
   id: string;
   user_id: string;
-  subject_id?: string;
-  recommended_topic?: string;
-  recommended_module?: string;
-  bloom_focus?: string;
-  reason?: string;
-  confidence?: number;
+  subject_id: string;
+  recommended_topic: string;
+  recommended_modules: string[]; // List of module IDs
+  recommended_quizzes: string[]; // List of quiz IDs
+  bloom_focus: string;
+  priority: 'high' | 'medium' | 'low';
+  reason: string;
+  diagnostic_result_id?: string;
+  confidence: number;
   timestamp?: string;
-  created_at?: string;
 }
+// --- END FIX ---
+
 
 // Analytics & Reports
 export interface StudentAnalytics {

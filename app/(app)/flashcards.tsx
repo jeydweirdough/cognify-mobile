@@ -28,10 +28,12 @@ export default function FlashcardsScreen() {
 
   const fetchFlashcards = async () => {
     try {
-      // We need to get flashcards from the module endpoint
-      // This is a workaround since we only have the ID
-      const { data } = await api.get(`/generate/generated_flashcards/for_module/${flashcardsId}`);
-      setFlashcardsData(data.items[0] || null);
+      // --- FIX: Fetch flashcards directly by their ID ---
+      const { data } = await api.get<GeneratedFlashcards>(
+        `/generate/generated_flashcards/${flashcardsId}`
+      );
+      setFlashcardsData(data);
+      // --- END FIX ---
     } catch (error: any) {
       console.error('Failed to fetch flashcards:', error.response?.data || error.message);
     } finally {
@@ -221,6 +223,7 @@ export default function FlashcardsScreen() {
   );
 }
 
+// ... styles remain unchanged
 const styles = StyleSheet.create({
   container: {
     flex: 1,

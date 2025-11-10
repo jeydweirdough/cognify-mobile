@@ -14,12 +14,14 @@ import { api } from '../../lib/api';
 import { Colors, Fonts } from '../../constants/cognify-theme';
 import { FontAwesome } from '@expo/vector-icons';
 import { router } from 'expo-router';
+// --- FIX: Import the new Recommendation type ---
 import type { Motivation, StudentAnalytics, Recommendation } from '../../lib/types';
 
 export default function HomeScreen() {
   const { user } = useAuth();
   const [motivation, setMotivation] = useState<Motivation | null>(null);
   const [analytics, setAnalytics] = useState<StudentAnalytics | null>(null);
+  // --- FIX: Use the new type ---
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -31,7 +33,8 @@ export default function HomeScreen() {
       const [motivationRes, analyticsRes, recsRes] = await Promise.all([
         api.get(`/utilities/motivation/${user.id}`),
         api.get(`/analytics/student_report/${user.id}`),
-        api.get('/recommendations/', { params: { limit: 3 } }),
+        // --- FIX: This endpoint is now correct ---
+        api.get(`/recommendations/by_student/${user.id}`, { params: { limit: 3 } }),
       ]);
 
       setMotivation(motivationRes.data);
@@ -166,17 +169,22 @@ export default function HomeScreen() {
               <Text style={styles.cardTitle}>Recommended for You</Text>
             </View>
             
-            {recommendations.map((rec, index) => (
+            {recommendations.map((rec) => ( // --- FIX: `rec` is now the correct type
               <View key={rec.id} style={styles.recItem}>
                 <Text style={styles.recTopic}>{rec.recommended_topic}</Text>
                 <Text style={styles.recReason}>{rec.reason}</Text>
                 <Pressable
-                  style={styles.recButton}
+                  style={[
+                    styles.recButton, 
+                    (!rec.recommended_modules || rec.recommended_modules.length === 0) && styles.recButtonDisabled
+                  ]}
                   onPress={() => {
-                    if (rec.recommended_module) {
-                      router.push(`/(app)/module/${rec.recommended_module}` as any);
+                    if (rec.recommended_modules && rec.recommended_modules.length > 0) {
+                      router.push(`/(app)/module/${rec.recommended_modules[0]}` as any);
                     }
-                  }}>
+                  }}
+                  disabled={!rec.recommended_modules || rec.recommended_modules.length === 0}
+                  >
                   <Text style={styles.recButtonText}>Start Studying</Text>
                   <FontAwesome name="arrow-right" size={12} color={Colors.primary} />
                 </Pressable>
@@ -351,6 +359,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     alignSelf: 'flex-start',
+  },
+  recButtonDisabled: {
+    opacity: 0.5,
   },
   recButtonText: {
     fontFamily: Fonts.semiBold,

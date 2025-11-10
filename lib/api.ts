@@ -4,9 +4,10 @@ import { storage } from './storage';
 // IMPORTANT: Replace with your actual backend URL
 // Local development: Use your computer's IP address (not localhost)
 // Find your IP: Windows (ipconfig), Mac/Linux (ifconfig)
-// Example: 'http://192.168.1.100:8000'
-// Production: 'https://your-backend.vercel.app'
-const API_URL = 'http://localhost:8000'; // ⚠️ CHANGE THIS
+// --- ⚠️ CRITICAL FIX: Change this URL ---
+const API_URL = 'http://localhost:8000';
+// For example: 'http://192.168.1.100:8000'
+// --- END FIX ---
 
 const TOKEN_KEY = 'cognify_token';
 
