@@ -1,5 +1,14 @@
 import { useState } from 'react';
-import { View, TextInput, StyleSheet, Pressable, Text, SafeAreaView } from 'react-native';
+import {
+  View,
+  TextInput,
+  StyleSheet,
+  Pressable,
+  Text,
+  SafeAreaView,
+  ActivityIndicator, // Import ActivityIndicator
+  Alert, // Import Alert
+} from 'react-native';
 import { useAuth } from '../../lib/auth';
 import { Link } from 'expo-router';
 import { Colors, Fonts } from '../../constants/cognify-theme';
@@ -8,7 +17,27 @@ import { FontAwesome } from '@expo/vector-icons'; // For the logo
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false); // Add loading state
   const { login } = useAuth();
+
+  const handleLogin = async () => {
+    if (!email || !password) {
+      Alert.alert('Missing Fields', 'Please enter both email and password.');
+      return;
+    }
+    
+    setIsLoading(true);
+    try {
+      await login(email, password);
+      // On success, the useAuth hook will handle navigation
+    } catch (e: any) {
+      // --- FIX: Catch the error from useAuth to stop loading ---
+      // The alert is already shown by lib/auth.tsx
+      console.log("Login error caught by UI");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -20,7 +49,7 @@ export default function LoginScreen() {
 
         <TextInput
           style={styles.input}
-          placeholder="Username" // Design says "Username"
+          placeholder="Email" // Changed from "Username" to "Email" for clarity
           value={email}
           onChangeText={setEmail}
           autoCapitalize="none"
@@ -36,8 +65,15 @@ export default function LoginScreen() {
           placeholderTextColor={Colors.placeholder}
         />
 
-        <Pressable style={styles.button} onPress={() => login(email, password)}>
-          <Text style={styles.buttonText}>Log In</Text>
+        <Pressable
+          style={[styles.button, isLoading && styles.buttonDisabled]}
+          onPress={handleLogin}
+          disabled={isLoading}>
+          {isLoading ? (
+            <ActivityIndicator size="small" color={Colors.primary} />
+          ) : (
+            <Text style={styles.buttonText}>Log In</Text>
+          )}
         </Pressable>
 
         <Text style={styles.forgotText}>Forgot password?</Text>
@@ -45,7 +81,7 @@ export default function LoginScreen() {
         <View style={styles.footer}>
           <Text style={styles.footerText}>Don't have an account?</Text>
           <Link href="/(auth)/signup" asChild>
-            <Pressable>
+            <Pressable disabled={isLoading}>
               <Text style={styles.createText}>Create</Text>
             </Pressable>
           </Link>
@@ -100,6 +136,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginTop: 10,
+  },
+  buttonDisabled: {
+    opacity: 0.8,
   },
   buttonText: {
     fontFamily: Fonts.semiBold,

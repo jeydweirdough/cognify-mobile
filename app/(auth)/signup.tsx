@@ -1,5 +1,14 @@
 import { useState } from 'react';
-import { View, TextInput, StyleSheet, Pressable, Text, SafeAreaView } from 'react-native';
+import {
+  View,
+  TextInput,
+  StyleSheet,
+  Pressable,
+  Text,
+  SafeAreaView,
+  ActivityIndicator, // Import ActivityIndicator
+  Alert, // Import Alert
+} from 'react-native';
 import { useAuth } from '../../lib/auth';
 import { Link } from 'expo-router';
 import { Colors, Fonts } from '../../constants/cognify-theme';
@@ -8,7 +17,33 @@ import { FontAwesome } from '@expo/vector-icons';
 export default function SignUpScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false); // Add loading state
   const { signup } = useAuth();
+
+  const handleSignUp = async () => {
+    if (!email || !password) {
+      Alert.alert('Missing Fields', 'Please enter both email and password.');
+      return;
+    }
+    
+    // Simple password validation
+    if (password.length < 6) {
+      Alert.alert('Weak Password', 'Password must be at least 6 characters long.');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      await signup(email, password);
+      // On success, the useAuth hook will show an alert and handle navigation
+    } catch (e: any) {
+      // --- FIX: Catch the error from useAuth to stop loading ---
+      // The alert is already shown by lib/auth.tsx
+      console.log("Signup error caught by UI");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -36,14 +71,21 @@ export default function SignUpScreen() {
           placeholderTextColor={Colors.placeholder}
         />
 
-        <Pressable style={styles.button} onPress={() => signup(email, password)}>
-          <Text style={styles.buttonText}>Create</Text>
+        <Pressable
+          style={[styles.button, isLoading && styles.buttonDisabled]}
+          onPress={handleSignUp}
+          disabled={isLoading}>
+          {isLoading ? (
+            <ActivityIndicator size="small" color={Colors.primary} />
+          ) : (
+            <Text style={styles.buttonText}>Create</Text>
+          )}
         </Pressable>
 
         <View style={styles.footer}>
           <Text style={styles.footerText}>Already have an account?</Text>
           <Link href="/(auth)/login" asChild>
-            <Pressable>
+            <Pressable disabled={isLoading}>
               <Text style={styles.createText}>Log In</Text>
             </Pressable>
           </Link>
@@ -98,6 +140,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginTop: 10,
+  },
+  buttonDisabled: {
+    opacity: 0.8,
   },
   buttonText: {
     fontFamily: Fonts.semiBold,

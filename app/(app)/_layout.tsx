@@ -109,13 +109,6 @@ export default function AppLayout() {
           href: null, // Hide old explore
         }}
       />
-
-      <Tabs.Screen
-        name="modal"
-        options={{
-          href: null,
-        }}
-      />
     </Tabs>
   );
 }

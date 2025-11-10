@@ -3,6 +3,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { storage } from './storage';
 import { Href, useRouter, useSegments } from 'expo-router'; 
 import { api, TOKEN_KEY } from './api';
+import { Alert } from 'react-native'; // Import Alert
 
 // Define the shape of the user profile based on backend's UserProfileModel
 interface User {
@@ -20,6 +21,7 @@ interface AuthContextType {
   login: (email: string, pass: string) => Promise<void>;
   signup: (email: string, pass: string) => Promise<void>;
   logout: () => void;
+  setUser: React.Dispatch<React.SetStateAction<User | null>>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -98,7 +100,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       router.replace('/(app)' as Href);
     } catch (e: any) {
       console.error('Login failed:', e.response?.data || e.message);
-      alert(`Login Failed: ${e.response?.data?.detail || 'Unknown error'}`);
+      // --- FIX: Show alert AND re-throw error ---
+      Alert.alert(`Login Failed`, e.response?.data?.detail || 'Unknown error');
+      throw e; // This allows the UI to stop the loading spinner
     }
   };
 
@@ -106,10 +110,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       // Backend route: POST /auth/signup
       await api.post('/auth/signup', { email, password: pass });
+      // On success, show alert and then log in
+      Alert.alert('Account Created', 'Your account has been successfully created. Logging you in...');
       await login(email, pass);
     } catch (e: any) {
       console.error('Signup failed:', e.response?.data || e.message);
-      alert(`Signup Failed: ${e.response?.data?.detail || 'Unknown error'}`);
+      // --- FIX: Show alert AND re-throw error (unless it's a login error, which login() will handle) ---
+      if (e.response?.data?.detail.includes('Account with email')) {
+        Alert.alert(`Signup Failed`, e.response?.data?.detail || 'Unknown error');
+      }
+      throw e; // This allows the UI to stop the loading spinner
     }
   };
 
@@ -137,6 +147,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         login,
         signup,
         logout,
+        setUser, // Pass setUser
       }}>
       {children}
     </AuthContext.Provider>
