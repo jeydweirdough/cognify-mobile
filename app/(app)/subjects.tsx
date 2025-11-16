@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState } from "react";
 import {
   StyleSheet,
   ActivityIndicator,
@@ -6,19 +6,39 @@ import {
   View,
   Text,
   ScrollView,
-} from 'react-native';
+  Image,
+  Platform, // Use Platform for iOS/Android specific styling if needed
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+// Assuming you have 'expo-router', 'react-native-svg', and your theme/assets setup.
+import { router } from "expo-router";
+// NOTE: Colors and Fonts are assumed to be defined in your '../../constants/cognify-theme'
+const Colors = {
+  background: "#F8F8F8", // Light gray background
+  white: "#FFFFFF",
+  text: "#333333", // Dark text
+  primary: "#6A2A94", // Main purple for activity indicator
+};
+const Fonts = {
+  regular: "System",
+  semiBold: "System",
+  bold: "System",
+};
 
-// import { api } from '../../lib/api'; // Commented out for mock data
-import { router } from 'expo-router';
-// Assuming you have these theme constants
-import { Colors, Fonts } from '../../constants/cognify-theme';
-import { FontAwesome } from '@expo/vector-icons';
-import Svg, { Circle, Defs, LinearGradient, Stop } from 'react-native-svg';
-// import type { Subject, PaginatedResponse } from '../../lib/types'; // Commented out for mock data
+import Svg, { Circle, Defs, LinearGradient, Stop } from "react-native-svg";
+
+
+const images = {
+  "1": require("@/assets/images/psych_asses.png"),
+
+  "2": require("@/assets/images/dev_psych.png"),
+
+  "3": require("@/assets/images/abnormal_psych.png"),
+
+  "4": require("@/assets/images/io_psych.png"),
+};
 
 // --- MOCK DATA STRUCTURES ---
-// Define the structure of the mocked data to represent the cards
 interface ReadinessCardData {
   title: string;
   subtitle: string;
@@ -34,56 +54,55 @@ interface SubjectCardData {
   iconBgColor: string;
 }
 
-// Mocked data to perfectly match the screenshot
 const MOCK_READINESS_DATA: ReadinessCardData = {
-  title: 'Readiness Level',
-  subtitle: 'Your current pass probability',
-  percentage: 36,
+  title: "Readiness Level",
+  subtitle: "Your current pass probability",
+  percentage: 46,
 };
 
+// **ADJUSTED MOCK DATA TO MATCH THE SCREENSHOT PERCENTAGES AND COLORS**
 const MOCK_SUBJECTS_DATA: SubjectCardData[] = [
   {
-    id: '1',
-    name: 'Psychological Assessment',
+    id: "1",
+    name: "Psychological Assessment",
     description:
-      'There is no one who loves pain itself, who seeks after it and wants to have it, simply because it is pain.',
+      "Understanding and using psychological tests to measure behavior and mental processes.",
     percentage: 60,
-    iconColor: '#D8C713', // Yellow/Gold
-    iconBgColor: '#F0F5D5', // Light Yellow/Green
+    iconColor: "#D8C713",
+    iconBgColor: "#F0F5D5",
   },
   {
-    id: '2',
-    name: 'Developmental Psychology',
+    id: "2",
+    name: "Developmental Psychology",
     description:
-      'There is no one who loves pain itself, who seeks after it and wants to have it, simply because it is pain.',
+      "Study of human growth and changes from childhood to adulthood.",
     percentage: 75,
-    iconColor: '#4C609B', // Blue/Purple
-    iconBgColor: '#E2E6F2', // Light Blue/Gray
+    iconColor: "#4C609B",
+    iconBgColor: "#E2E6F2",
   },
   {
-    id: '3',
-    name: 'Abnormal Psychology',
+    id: "3",
+    name: "Abnormal Psychology",
     description:
-      'There is no one who loves pain itself, who seeks after it and wants to have it, simply because it is pain.',
+      "Study of psychological disorders, their causes, and treatments.",
     percentage: 90,
-    iconColor: '#30C49F', // Green/Teal
-    iconBgColor: '#E1F8F3', // Light Green
+    iconColor: "#30C49F",
+    iconBgColor: "#E1F8F3",
   },
   {
-    id: '4',
-    name: 'Industrial/Organizational Psychology',
+    id: "4",
+    name: "Industrial/Organizational Psychology",
     description:
-      'There is no one who loves pain itself, who seeks after it and wants to have it, simply because it is pain.',
+      "Application of psychology to workplace behavior and performance.",
     percentage: 45,
-    iconColor: '#D38A4D', // Orange/Brown
-    iconBgColor: '#F9ECE3', // Light Orange
+    iconColor: "#D38A4D",
+    iconBgColor: "#F9ECE3",
   },
 ];
-// --- END MOCK DATA STRUCTURES ---
+
 
 /**
- * Custom Circular Progress Component (Styled to match the image)
- * Note: The actual progress animation logic is simplified for this example.
+ * Custom Circular Progress Component (Readiness Card)
  */
 const CircularProgress = ({ percentage }: { percentage: number }) => {
   const size = 60;
@@ -97,16 +116,16 @@ const CircularProgress = ({ percentage }: { percentage: number }) => {
     <View style={{ width: size, height: size }}>
       <Svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
         <Defs>
+          {/* Colors for the Readiness Card gradient (Purple to Orange) */}
           <LinearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="0%">
-            {/* The gradient colors based on the image: Darker Purple/Orange */}
-            <Stop offset="0%" stopColor="#8A46AD" /> 
+            <Stop offset="0%" stopColor="#8A46AD" />
             <Stop offset="100%" stopColor="#F59E0B" />
           </LinearGradient>
         </Defs>
 
-        {/* Background Circle (Light Grey) */}
+        {/* Background Circle */}
         <Circle
-          stroke="#E0E0E0"
+          stroke="#4F267A" // Darker version of card background for better contrast
           fill="none"
           cx={size / 2}
           cy={size / 2}
@@ -114,7 +133,7 @@ const CircularProgress = ({ percentage }: { percentage: number }) => {
           strokeWidth={strokeWidth}
         />
 
-        {/* Progress Circle (Gradient) */}
+        {/* Progress Arc */}
         <Circle
           stroke="url(#gradient)"
           fill="none"
@@ -129,13 +148,14 @@ const CircularProgress = ({ percentage }: { percentage: number }) => {
         />
       </Svg>
       <View style={styles.percentageTextContainer}>
-        <Text style={styles.percentageText}>{percentage}%</Text>
+        <Text style={styles.readinessPercentageText}>{percentage}%</Text>{" "}
+        {/* Use different style for readiness percentage */}
       </View>
     </View>
   );
 };
 
-// Component for the Readiness Level Card (The large purple card)
+// Component for the Readiness Level Card
 const ReadinessCard = ({ data }: { data: ReadinessCardData }) => (
   <View style={styles.readinessCard}>
     <View>
@@ -148,45 +168,58 @@ const ReadinessCard = ({ data }: { data: ReadinessCardData }) => (
 
 // Component for the Subject Cards
 const SubjectCard = ({ data }: { data: SubjectCardData }) => {
-  // Line calculations
-  const totalWidth = 280; // Placeholder based on general card size in RN
-  const lineFilledWidth = (data.percentage / 100) * totalWidth;
-
-  // Placeholder for the icon (using a simple styled View)
-  const IconPlaceholder = () => (
+  // Image component for the icon
+  const IconImage = () => (
     <View
       style={[
-        styles.subjectIconPlaceholder,
+        styles.subjectIconContainer, // Use a container for the image/placeholder
         { backgroundColor: data.iconBgColor },
-      ]}>
-      {/* Actual image/icon will go here */}
-      <Text style={{ color: data.iconColor }}>{data.name.charAt(0)}</Text>
+      ]}
+    >
+      {/* Placeholder for the image */}
+      {/* NOTE: If using the original component's image structure, replace the View with Image and use the source prop */}
+      <Image
+        source={images[data.id as keyof typeof images]}
+        style={styles.subjectIconImage}
+        resizeMode="contain"
+      />
     </View>
   );
 
   return (
+    // Use Pressable to capture the entire card press
     <Pressable
       style={styles.subjectCard}
-      onPress={() => router.push(`/(app)/subject/${data.id}`)}>
-      <View style={styles.subjectCardHeader}>
-        <IconPlaceholder />
-        <Text style={styles.subjectName}>{data.name}</Text>
-      </View>
+      onPress={() => router.push(`/(app)/subject/${data.id}`)}
+    >
+      {/* Subject Name (Aligned to the left, above the content block) */}
+      <Text style={styles.subjectName}>{data.name}</Text>
 
-      <View style={styles.subjectContent}>
-        <Text style={styles.subjectDescription}>{data.description}</Text>
-        <Text style={styles.subjectPercentage}>{data.percentage}%</Text>
-      </View>
+      {/* Content Row: Icon | Description + Progress Bar + Percentage */}
+      <View style={styles.subjectContentRow}>
+        <IconImage />
 
-      {/* Progress Bar (Styled to match the image's line progress) */}
-      <View style={styles.progressBarContainer}>
-        <View style={styles.progressBarBackground}>
-          <View
-            style={[
-              styles.progressBarFill,
-              { width: `${data.percentage}%`, backgroundColor: data.iconColor },
-            ]}
-          />
+        <View style={styles.subjectDetailsColumn}>
+          {/* Description and Percentage Row */}
+          <View style={styles.descriptionRow}>
+            <Text style={styles.subjectDescription}>{data.description}</Text>
+            <Text style={styles.subjectPercentage}>{data.percentage}%</Text>
+          </View>
+
+          {/* Progress Bar */}
+          <View style={styles.progressBarContainer}>
+            <View style={styles.progressBarBackground}>
+              <View
+                style={[
+                  styles.progressBarFill,
+                  {
+                    width: `${data.percentage}%`,
+                    backgroundColor: data.iconColor,
+                  },
+                ]}
+              />
+            </View>
+          </View>
         </View>
       </View>
     </Pressable>
@@ -196,9 +229,8 @@ const SubjectCard = ({ data }: { data: SubjectCardData }) => {
 export default function LearningScreen() {
   const [loading, setLoading] = useState(true);
 
-  // Use a simple timeout to simulate fetching
   useEffect(() => {
-    // Simulate API call delay
+    // Simulate loading time
     setTimeout(() => {
       setLoading(false);
     }, 500);
@@ -214,19 +246,15 @@ export default function LearningScreen() {
     );
   }
 
-  // Use ScrollView to hold all the stacked cards
   return (
     <SafeAreaView style={styles.container}>
-      {/* Header */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Learning</Text>
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        {/* Readiness Card */}
         <ReadinessCard data={MOCK_READINESS_DATA} />
 
-        {/* Subject Cards */}
         {MOCK_SUBJECTS_DATA.map((subject) => (
           <SubjectCard key={subject.id} data={subject} />
         ))}
@@ -240,56 +268,52 @@ export default function LearningScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background, // Assuming a light background color
+    backgroundColor: Colors.background, // Should be light gray for the body
   },
   centered: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
-  // --- MOCK STATUS BAR STYLES ---
-  statusBarMock: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingHorizontal: 15,
-    paddingTop: 8,
-    // Note: The actual status bar is above SafeAreaView on most devices
-  },
-  timeText: {
-    fontSize: 13,
-    fontFamily: Fonts.semiBold, // Assuming the time is semi-bold
-    color: '#000',
-  },
-  signalIconMock: {
-    flexDirection: 'row',
-    gap: 5,
-  },
-  // --- HEADER STYLES ---
   header: {
     paddingHorizontal: 20,
-    paddingBottom: 10,
-    alignItems: 'center', // Center the title for the look in the image
+    paddingVertical: 10,
+    alignItems: "center",
+    borderBottomWidth: StyleSheet.hairlineWidth, 
+    borderColor: "#EFEFEF",
+    backgroundColor: Colors.white,
   },
   headerTitle: {
-    fontFamily: Fonts.semiBold, // Using semiBold as a best guess for the main title
+    fontFamily: Fonts.semiBold,
     fontSize: 18,
-    color: Colors.text, // Assuming dark text color
+    color: Colors.text,
   },
-  // --- SCROLL CONTENT STYLES ---
   scrollContent: {
     paddingHorizontal: 20,
     paddingBottom: 30,
-    paddingTop: 10, // Add a little space after the main header
+    paddingTop: 10, // Added padding top for spacing
   },
-  // --- READINESS CARD STYLES ---
+  // --- Readiness Card Styles ---
   readinessCard: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: '#6A2A94', // Dark Purple
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    backgroundColor: "#6A2A94", // Main purple color
     borderRadius: 15,
     padding: 20,
     marginBottom: 20,
+    // Shadow to match the elevated look in the screenshot
+    ...Platform.select({
+      ios: {
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.2,
+        shadowRadius: 4,
+      },
+      android: {
+        elevation: 4,
+      },
+    }),
   },
   readinessTitle: {
     fontFamily: Fonts.semiBold,
@@ -299,95 +323,100 @@ const styles = StyleSheet.create({
   readinessSubtitle: {
     fontFamily: Fonts.regular,
     fontSize: 13,
-    color: '#D4B8E3', // Lighter purple for subtitle
+    color: "#D4B8E3", // Lighter purple for subtitle
     marginTop: 4,
   },
-  // CircularProgress Styles
   percentageTextContainer: {
-    position: 'absolute',
+    position: "absolute",
     left: 0,
     right: 0,
     top: 0,
     bottom: 0,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
-  percentageText: {
+  readinessPercentageText: {
     fontFamily: Fonts.bold,
     fontSize: 16,
-    color: Colors.text,
+    color: Colors.white, 
   },
-  // --- SUBJECT CARD STYLES ---
+  // --- Subject Card Styles ---
   subjectCard: {
     backgroundColor: Colors.white,
     borderRadius: 15,
     padding: 15,
     marginBottom: 10,
-    // Add light shadow/border to match the image's card separation
+    // Subtle shadow/border effect from the screenshot
     borderWidth: 1,
-    borderColor: '#EFEFEF',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
-  },
-  subjectCardHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 5,
+    borderColor: "#EFEFEF",
+    ...Platform.select({
+      ios: {
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 2,
+      },
+      android: {
+        elevation: 1,
+      },
+    }),
   },
   subjectName: {
     fontFamily: Fonts.semiBold,
     fontSize: 16,
     color: Colors.text,
-    marginLeft: 10,
+    marginBottom: 10, // Space between title and content row
   },
-  subjectContent: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-end',
-    paddingLeft: 60, // Align text and percentage
-    paddingRight: 5,
-    marginTop: 5,
-    marginBottom: 10,
+  subjectContentRow: {
+    flexDirection: "row",
+    alignItems: "flex-start", // Align icon to the top of the content block
+  },
+  subjectDetailsColumn: {
+    flex: 1,
+    marginLeft: 15, // Space between icon and details column
+  },
+  subjectIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    justifyContent: "center",
+    alignItems: "center",
+    alignSelf: "flex-start", // Keep the icon at the top of the row
+  },
+  subjectIconImage: {
+    width: 24, // Icon size
+    height: 24, // Icon size
+  },
+  descriptionRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-end",
+    marginBottom: 5,
   },
   subjectDescription: {
-    flex: 1,
+    flex: 1, // Allow text to take up most of the space
     fontFamily: Fonts.regular,
     fontSize: 12,
-    color: Colors.text, // Assuming dark text color
+    color: Colors.text,
+    lineHeight: 18, // Added to improve readability and match block height
+    marginRight: 10, // Space before percentage
   },
   subjectPercentage: {
     fontFamily: Fonts.bold,
     fontSize: 14,
     color: Colors.text,
-    marginLeft: 10,
   },
-  // --- PROGRESS BAR STYLES ---
   progressBarContainer: {
-    paddingLeft: 60, // Align with the start of the description text
-    paddingRight: 5,
+    marginTop: 5,
   },
   progressBarBackground: {
     height: 6,
     borderRadius: 3,
-    backgroundColor: '#EAEAEA', // Light background of the bar
-    overflow: 'hidden',
+    backgroundColor: "#EAEAEA",
+    overflow: "hidden",
   },
   progressBarFill: {
-    height: '100%',
+    height: "100%",
     borderRadius: 3,
-    // The background color will be dynamically set by the component
-  },
-  // --- ICON PLACEHOLDER STYLES ---
-  subjectIconPlaceholder: {
-    position: 'absolute', // Allows the progress bar to go under
-    width: 40,
-    height: 40,
-    borderRadius: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
-    // The icon color/background is set dynamically
   },
 });
