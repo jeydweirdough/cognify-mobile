@@ -87,7 +87,7 @@ const MOCK_SUBJECTS_DATA: SubjectCardData[] = [
       "Study of psychological disorders, their causes, and treatments.",
     percentage: 90,
     iconColor: "#30C49F",
-    iconBgColor: "#E1F8F3",
+    iconBgColor: "#FCF5EE",
   },
   {
     id: "4",
@@ -118,14 +118,14 @@ const CircularProgress = ({ percentage }: { percentage: number }) => {
         <Defs>
           {/* Colors for the Readiness Card gradient (Purple to Orange) */}
           <LinearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="0%">
-            <Stop offset="0%" stopColor="#8A46AD" />
-            <Stop offset="100%" stopColor="#F59E0B" />
+            <Stop offset="0%" stopColor="#FF8D28" />
+            <Stop offset="100%" stopColor="#FF8D28" />
           </LinearGradient>
         </Defs>
 
         {/* Background Circle */}
         <Circle
-          stroke="#4F267A" // Darker version of card background for better contrast
+          stroke="#eee7f5ff" // Darker version of card background for better contrast
           fill="none"
           cx={size / 2}
           cy={size / 2}
@@ -176,8 +176,6 @@ const SubjectCard = ({ data }: { data: SubjectCardData }) => {
         { backgroundColor: data.iconBgColor },
       ]}
     >
-      {/* Placeholder for the image */}
-      {/* NOTE: If using the original component's image structure, replace the View with Image and use the source prop */}
       <Image
         source={images[data.id as keyof typeof images]}
         style={styles.subjectIconImage}
@@ -298,7 +296,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    backgroundColor: "#6A2A94", // Main purple color
+    backgroundColor: "#6E3D84", // Main purple color
     borderRadius: 15,
     padding: 20,
     marginBottom: 20,
@@ -344,7 +342,7 @@ const styles = StyleSheet.create({
   subjectCard: {
     backgroundColor: Colors.white,
     borderRadius: 15,
-    padding: 15,
+    padding: 20,
     marginBottom: 10,
     // Subtle shadow/border effect from the screenshot
     borderWidth: 1,
@@ -376,16 +374,16 @@ const styles = StyleSheet.create({
     marginLeft: 15, // Space between icon and details column
   },
   subjectIconContainer: {
-    width: 40,
-    height: 40,
+    width: 60,
+    height: 60,
     borderRadius: 10,
     justifyContent: "center",
     alignItems: "center",
     alignSelf: "flex-start", // Keep the icon at the top of the row
   },
   subjectIconImage: {
-    width: 24, // Icon size
-    height: 24, // Icon size
+    width: 40, // Icon size
+    height: 40, // Icon size
   },
   descriptionRow: {
     flexDirection: "row",
