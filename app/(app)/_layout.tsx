@@ -2,6 +2,7 @@ import { Tabs } from 'expo-router';
 import React from 'react';
 import { FontAwesome } from '@expo/vector-icons';
 import { Colors } from '../../constants/cognify-theme';
+import { Platform } from 'react-native';
 
 const Icon = ({ 
   name, 
@@ -18,23 +19,36 @@ export default function AppLayout() {
     <Tabs
       screenOptions={{
         tabBarActiveTintColor: Colors.primary,
-        tabBarInactiveTintColor: Colors.placeholder,
+        tabBarInactiveTintColor: '#9CA3AF',
         tabBarShowLabel: true,
         tabBarLabelStyle: {
           fontSize: 11,
           fontWeight: '600',
+          marginTop: 4,
         },
         headerShown: false,
         tabBarStyle: {
           backgroundColor: Colors.white,
-          borderTopWidth: 1,
-          borderTopColor: '#E0E0E0',
-          paddingBottom: 4,
-          paddingTop: 4,
-          height: 60,
+          borderTopWidth: 0,
+          paddingBottom: Platform.OS === 'ios' ? 24 : 16,
+          paddingTop: 12,
+          height: Platform.OS === 'ios' ? 88 : 72,
+          elevation: 0,
+          shadowColor: '#000',
+          shadowOffset: {
+            width: 0,
+            height: -4,
+          },
+          shadowOpacity: 0.08,
+          shadowRadius: 12,
+          borderTopLeftRadius: 24,
+          borderTopRightRadius: 24,
+          position: 'absolute',
+          marginHorizontal: 0,
         },
       }}>
       
+      {/* 1. Home Tab */}
       <Tabs.Screen
         name="index"
         options={{
@@ -43,35 +57,47 @@ export default function AppLayout() {
         }}
       />
       
+      {/* 2. Learning Tab */}
       <Tabs.Screen
         name="subjects"
         options={{
-          title: 'Subjects',
+          title: 'Learning',
           tabBarIcon: ({ color }) => <Icon name="book" color={color} />,
         }}
       />
 
+      {/* 3. Progress Tab */}
       <Tabs.Screen
         name="progress"
         options={{
           title: 'Progress',
-          tabBarIcon: ({ color }) => <Icon name="bar-chart" color={color} />,
+          tabBarIcon: ({ color }) => <Icon name="flag" color={color} />,
         }}
       />
       
+      {/* 4. Notifications Tab */}
+      <Tabs.Screen
+        name="notifications"
+        options={{
+          title: 'Notifications',
+          tabBarIcon: ({ color }) => <Icon name="bell" color={color} />,
+        }}
+      />
+      
+      {/* 5. Account Tab */}
       <Tabs.Screen
         name="profile"
         options={{
-          title: 'Profile',
+          title: 'Account',
           tabBarIcon: ({ color }) => <Icon name="user" color={color} />,
         }}
       />
 
-      {/* Hidden screens (not in tab bar) */}
+      {/* Hidden screens */}
       <Tabs.Screen
         name="subject/[id]"
         options={{
-          href: null, // Hides from tab bar
+          href: null,
         }}
       />
       
@@ -106,7 +132,7 @@ export default function AppLayout() {
       <Tabs.Screen
         name="explore"
         options={{
-          href: null, // Hide old explore
+          href: null,
         }}
       />
     </Tabs>
