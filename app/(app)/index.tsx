@@ -1,7 +1,6 @@
 import React from "react";
 import {
   Image,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
@@ -10,6 +9,7 @@ import {
   // Import Platform for conditional styling (optional but good practice)
   Platform,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 // --- ACTUAL EXPO IMPORTS ---
 import { useFonts } from "expo-font";
 import * as SplashScreen from "expo-splash-screen"; // Used to manage the loading screen
@@ -251,9 +251,9 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingVertical: 0, 
-    backgroundColor: PRIMARY_COLOR,
-    paddingTop: 70,
-    paddingBottom: 20,
+    backgroundColor: BACKGROUND_COLOR,
+    paddingTop: 0,
+    paddingBottom: 0,
     paddingHorizontal: 20,
     borderBottomLeftRadius: 10,
     borderBottomRightRadius: 10,
@@ -265,7 +265,7 @@ const styles = StyleSheet.create({
   },
   headerContentSafeArea: {
     paddingVertical: 20,
-    paddingBottom: 30, 
+    paddingBottom: 15, 
     paddingHorizontal: 20,
   },
   headerContent: {
@@ -278,18 +278,18 @@ const styles = StyleSheet.create({
     fontFamily: FONT_FAMILY,
     fontSize: 20,
     fontWeight: "700",
-    color: "#FFF",
+    color: "#383333ff",
     marginBottom: 4,
   },
   // Font applied here
   username: {
     fontFamily: FONT_FAMILY,
     fontSize: 14,
-    color: "rgba(255, 255, 255, 0.9)",
+    color: "#383333ff",
   },
   avatarContainer: {
-    width: 50,
-    height: 50,
+    width: 60,
+    height: 60,
     borderRadius: 10,
     overflow: "hidden",
     borderWidth: 2,
