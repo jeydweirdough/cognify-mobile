@@ -13,3 +13,11 @@ export const Fonts = {
   semiBold: 'Poppins_600SemiBold',
   bold: 'Poppins_700Bold',
 };
+
+// home
+export const PRIMARY_COLOR = "#3E1E68";
+export const ACCENT_COLOR = "#000000ff";
+export const BACKGROUND_COLOR = "#FFFFFF";
+export const FONT_FAMILY = "LexendDeca-Medium";
+export const FONT_FAMILY_REGULAR = "LexendDeca-Regular";
+

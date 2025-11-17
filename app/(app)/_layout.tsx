@@ -59,7 +59,7 @@ export default function AppLayout() {
       
       {/* 2. Learning Tab */}
       <Tabs.Screen
-        name="subjects"
+        name="screens/subjects/index"
         options={{
           title: 'Learning',
           tabBarIcon: ({ color }) => <Icon name="book" color={color} />,
@@ -68,7 +68,7 @@ export default function AppLayout() {
 
       {/* 3. Progress Tab */}
       <Tabs.Screen
-        name="progress"
+        name="screens/progress/index"
         options={{
           title: 'Progress',
           tabBarIcon: ({ color }) => <Icon name="flag" color={color} />,
