@@ -113,7 +113,7 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingHorizontal: 20,
-    paddingVertical: 10,
+    paddingVertical: 15,
     alignItems: "center",
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderColor: "#EFEFEF",

@@ -19,7 +19,7 @@ export default function AppLayout() {
     <Tabs
       screenOptions={{
         tabBarActiveTintColor: Colors.primary,
-        tabBarInactiveTintColor: '#9CA3AF',
+        tabBarInactiveTintColor: '#3e4042ff',
         tabBarShowLabel: true,
         tabBarLabelStyle: {
           fontSize: 11,
@@ -31,8 +31,8 @@ export default function AppLayout() {
           backgroundColor: Colors.white,
           borderTopWidth: 0,
           paddingBottom: Platform.OS === 'ios' ? 24 : 16,
-          paddingTop: 12,
-          height: Platform.OS === 'ios' ? 88 : 72,
+          paddingTop: 10,
+          height: Platform.OS === 'ios' ? 90 : 95,
           elevation: 0,
           shadowColor: '#000',
           shadowOffset: {
@@ -44,7 +44,7 @@ export default function AppLayout() {
           borderTopLeftRadius: 24,
           borderTopRightRadius: 24,
           position: 'absolute',
-          marginHorizontal: 0,
+          marginHorizontal: 1,
         },
       }}>
       
@@ -77,7 +77,7 @@ export default function AppLayout() {
       
       {/* 4. Notifications Tab */}
       <Tabs.Screen
-        name="notifications"
+        name="screens/notifications/index"
         options={{
           title: 'Notifications',
           tabBarIcon: ({ color }) => <Icon name="bell" color={color} />,
@@ -86,7 +86,7 @@ export default function AppLayout() {
       
       {/* 5. Account Tab */}
       <Tabs.Screen
-        name="profile"
+        name="screens/profile/index"
         options={{
           title: 'Account',
           tabBarIcon: ({ color }) => <Icon name="user" color={color} />,

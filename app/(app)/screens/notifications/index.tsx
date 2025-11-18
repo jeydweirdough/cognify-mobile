@@ -3,11 +3,6 @@ import { ActivityIndicator, ScrollView, Text, View, StyleSheet } from "react-nat
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useFonts } from "expo-font";
 
-import { ReadinessCard } from "@/components/subjects/ReadinessCard";
-import { AchievementsCard } from "@/components/progress/Achievements";
-import { ProgressOverviewCard } from "@/components/progress/Overview";
-import MotivationCard from "@/components/progress/Motivation-quote";
-
 const Colors = {
   background: "#F8F8F8",
   white: "#FFFFFF",
@@ -17,31 +12,21 @@ const Colors = {
 
 const Fonts = {
   semiBold: "LexendDeca-Medium",
-  regular: "LexendDeca-Regular",
 };
 
-
-const MOCK_READINESS_DATA = {
-  title: "Readiness Level",
-  subtitle: "Your current pass probability",
-  percentage: 39,
-};
-
-
-export default function ProgressScreen() {
+export default function NotificationsScreen() {
   const [loading, setLoading] = useState(true);
-   // Load custom font
-    const [fontsLoaded] = useFonts({
-      "LexendDeca-Medium": require("@/assets/fonts/LexendDeca-Medium.ttf"),
-      "LexendDeca-Regular": require("@/assets/fonts/LexendDeca-Regular.ttf"),
-    });
-  
+
+  const [fontsLoaded] = useFonts({
+    "LexendDeca-Medium": require("@/assets/fonts/LexendDeca-Medium.ttf"),
+  });
 
   useEffect(() => {
-    setTimeout(() => setLoading(false), 500);
+    const timer = setTimeout(() => setLoading(false), 500);
+    return () => clearTimeout(timer);
   }, []);
 
-  if (loading) {
+  if (loading || !fontsLoaded) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.centered}>
@@ -54,15 +39,9 @@ export default function ProgressScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Progress</Text>
+        <Text style={styles.headerTitle}>Notifications</Text>
       </View>
-
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        <MotivationCard />
-        <ReadinessCard data={MOCK_READINESS_DATA} />
-        <AchievementsCard />
-        <ProgressOverviewCard />
-      </ScrollView>
+      <ScrollView contentContainerStyle={styles.scrollContent}></ScrollView>
     </SafeAreaView>
   );
 }

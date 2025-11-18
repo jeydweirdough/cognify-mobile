@@ -9,6 +9,7 @@ import DailyPractice from "@/components/home/DailyPractice";
 import AssessmentTest from "@/components/home/AssessmentTest";
 import RecommendedCard from "@/components/home/RecommendedCard";
 import ContinueReading from "@/components/home/ContinueReading";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 // --- KEEP SPLASH SCREEN UNTIL FONTS LOADED ---
 SplashScreen.preventAutoHideAsync();
@@ -26,17 +27,19 @@ export default function App() {
   if (!fontsLoaded) return null;
 
   return (
-    <View style={{ flex: 1 }}>
-      <Header />
-      <ScrollView style={{ flex: 1 }}>
-        <View style={{ paddingHorizontal: 20, marginTop: -10 }}>
-          <DailyPractice />
-          <AssessmentTest />
-          <RecommendedCard />
-          <ContinueReading />
-          <View style={{ height: 100 }} />
-        </View>
-      </ScrollView>
-    </View>
+    <SafeAreaView style={{ flex: 1, backgroundColor: "#F9F9F9" }}>
+      <View style={{ flex: 1 }}>
+        <Header />
+        <ScrollView style={{ flex: 1 }}>
+          <View style={{ paddingHorizontal: 20, marginTop: -10 }}>
+            <DailyPractice />
+            <AssessmentTest />
+            <RecommendedCard />
+            <ContinueReading />
+            <View style={{ height: 100 }} />
+          </View>
+        </ScrollView>
+      </View>
+    </SafeAreaView>
   );
 }

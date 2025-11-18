@@ -28,7 +28,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#156781",
     borderRadius: 16,
     padding: 20,
-    marginTop: 24,
+    marginTop: 10,
     shadowColor: "#FDFFB8",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
@@ -44,8 +44,8 @@ const styles = StyleSheet.create({
     width: "80%", // row width set to 80%
   },
   title: {
-    fontSize: 18,
-    fontWeight: "700",
+    fontSize: 16,
+    fontWeight: "500",
     // fontStyle: "italic",
     color: "#FFF",
   },

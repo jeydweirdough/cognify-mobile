@@ -40,7 +40,6 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   headerContentSafeArea: {
-    paddingVertical: 5,
     paddingBottom: 5,
     paddingHorizontal: 15,
   },
@@ -64,14 +63,14 @@ const styles = StyleSheet.create({
   avatarContainer: {
     width: 60,
     height: 60,
-    borderRadius: 10,
+    borderRadius: 5,
     overflow: "hidden",
     borderWidth: 2,
     borderColor: "#FFF",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
-    shadowRadius: 3.84,
+    shadowRadius: 3,
     elevation: 5,
   },
   avatar: {

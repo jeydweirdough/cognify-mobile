@@ -1,6 +1,11 @@
 import React from "react";
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
-import { FONT_FAMILY, PRIMARY_COLOR, ACCENT_COLOR, BACKGROUND_COLOR } from "@/constants/cognify-theme";
+import {
+  FONT_FAMILY,
+  PRIMARY_COLOR,
+  ACCENT_COLOR,
+  BACKGROUND_COLOR,
+} from "@/constants/cognify-theme";
 
 const dailyPractice = [
   { day: "S", date: "15", completed: true },
@@ -60,8 +65,19 @@ export default function DailyPractice() {
 
 const styles = StyleSheet.create({
   section: { marginTop: 24 },
-  sectionHeader: { flexDirection: "row", alignItems: "center", marginBottom: 12, gap: 12 },
-  sectionTitle: { fontFamily: FONT_FAMILY, fontSize: 16, fontWeight: "600", color: "#000", marginRight: 5 },
+  sectionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 12,
+    gap: 12,
+  },
+  sectionTitle: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#000",
+    marginRight: 5,
+  },
   dayCounter: { fontFamily: FONT_FAMILY, fontSize: 13, color: "#666" },
   practiceGrid: {
     flexDirection: "row",
@@ -77,8 +93,8 @@ const styles = StyleSheet.create({
   },
   practiceItem: { alignItems: "center" },
   practiceBox: {
-    width: 42,
-    height: 58,
+    width: 40,
+    height: 60,
     borderRadius: 10,
     backgroundColor: BACKGROUND_COLOR,
     justifyContent: "center",
@@ -87,9 +103,24 @@ const styles = StyleSheet.create({
     borderColor: "#E0E0E0",
   },
   practiceCompleted: { backgroundColor: "#FFFC98", borderColor: ACCENT_COLOR },
-  practiceActive: { backgroundColor: "#FFF", borderColor: PRIMARY_COLOR, borderWidth: 2 },
-  practiceDay: { fontFamily: FONT_FAMILY, fontSize: 11, fontWeight: "500", color: "#999", marginBottom: 3 },
+  practiceActive: {
+    backgroundColor: "#FFF",
+    borderColor: PRIMARY_COLOR,
+    borderWidth: 2,
+  },
+  practiceDay: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 11,
+    fontWeight: "500",
+    color: "#999",
+    marginBottom: 3,
+  },
   practiceDayDark: { color: PRIMARY_COLOR },
-  practiceDate: { fontFamily: FONT_FAMILY, fontSize: 18, fontWeight: "700", color: "#999" },
+  practiceDate: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#999",
+  },
   practiceDateDark: { color: "#000" },
 });

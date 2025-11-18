@@ -1,0 +1,49 @@
+import React, { useState, useEffect } from "react";
+import { ScrollView, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+
+import Header from "@/components/ui/header";
+import ProfileVisualHeader from "@/components/profile/ProfileVisualHeader";
+import ProfileMenu from "@/components/profile/ProfileMenu";
+import  PersonalNoteCard  from "@/components/profile/PersonalNoteCard";
+import EditPersonalNoteModal from "@/components/profile/EditPersonalNoteModal";
+
+
+export default function ProfileScreen() {
+  const [isEditing, setIsEditing] = useState(false);
+  const [note, setNote] = useState(
+    "Morning, gising na ang papasa sa board."
+  );
+
+  const [modalVisible, setModalVisible] = useState(false);
+
+  return (
+    <SafeAreaView style={{ flex: 1, backgroundColor: "#F9F9F9" }}>
+      <ScrollView style={{ flex: 1 }}>
+        <Header title="Profile" />
+
+        <ProfileVisualHeader
+          user={null}
+        />
+
+        <View style={{ paddingHorizontal: 16, marginTop: 14 }}>
+          <PersonalNoteCard
+            note={note}
+            onEdit={() => setModalVisible(true)}
+          />
+        </View>
+
+        <View style={{ paddingHorizontal: 16, paddingBottom: 24 }}>
+          {!isEditing && <ProfileMenu onLogout={() => {}} />}
+        </View>
+      </ScrollView>
+
+      <EditPersonalNoteModal
+        visible={modalVisible}
+        value={note}
+        onClose={() => setModalVisible(false)}
+        onSave={(text) => setNote(text)}
+      />
+    </SafeAreaView>
+  );
+}
