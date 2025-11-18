@@ -149,7 +149,7 @@ export const ProgressOverviewCard: React.FC = () => {
 
 const overviewStyles = StyleSheet.create({
     container: {
-        marginBottom: 20,
+        marginBottom: 30,
     },
     mainTitle: {
         fontFamily: Fonts.semiBold,

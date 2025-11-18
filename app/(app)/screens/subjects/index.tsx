@@ -33,6 +33,8 @@ const MOCK_SUBJECTS_DATA = [
     percentage: 60,
     iconColor: "#D8C713",
     iconBgColor: "#F0F5D5",
+    cardBgColor: "#FDFFB8",
+
   },
   {
     id: "2",
@@ -41,6 +43,7 @@ const MOCK_SUBJECTS_DATA = [
     percentage: 75,
     iconColor: "#4C609B",
     iconBgColor: "#E2E6F2",
+    cardBgColor: "#FFE8CD",
   },
   {
     id: "3",
@@ -49,6 +52,7 @@ const MOCK_SUBJECTS_DATA = [
     percentage: 90,
     iconColor: "#30C49F",
     iconBgColor: "#FCF5EE",
+    cardBgColor: "#FCF5EE",
   },
   {
     id: "4",
@@ -57,6 +61,7 @@ const MOCK_SUBJECTS_DATA = [
     percentage: 45,
     iconColor: "#D38A4D",
     iconBgColor: "#F9ECE3",
+    cardBgColor: "#F4F8D3",
   },
 ];
 

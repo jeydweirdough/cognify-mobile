@@ -32,7 +32,7 @@ export default function AppLayout() {
           borderTopWidth: 0,
           paddingBottom: Platform.OS === 'ios' ? 24 : 16,
           paddingTop: 10,
-          height: Platform.OS === 'ios' ? 90 : 95,
+          height: Platform.OS === 'ios' ? 90 : 60,
           elevation: 0,
           shadowColor: '#000',
           shadowOffset: {

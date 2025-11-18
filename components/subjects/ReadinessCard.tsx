@@ -30,8 +30,8 @@ const styles = StyleSheet.create({
     backgroundColor: "#6E3D84",
     borderRadius: 15,
     padding: 20,
-    marginTop: 10,
-    marginBottom: 20,
+    marginTop: 0,
+    marginBottom: 15,
     ...Platform.select({
       ios: {
         shadowColor: "#000",

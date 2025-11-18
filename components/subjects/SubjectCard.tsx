@@ -8,11 +8,6 @@ const Fonts = {
   bold: "System",
 };
 
-const Colors = {
-  text: "#333333",
-  white: "#FFFFFF",
-};
-
 const images: any = {
   "1": require("@/assets/images/psych_asses.png"),
   "2": require("@/assets/images/dev_psych.png"),
@@ -22,118 +17,137 @@ const images: any = {
 
 export const SubjectCard = ({ data }: any) => {
   return (
-    <Pressable
-      style={styles.subjectCard}
-      onPress={() => router.push(`/(app)/subject/${data.id}`)}
-    >
-      <Text style={styles.subjectName}>{data.name}</Text>
+    <View style={{ marginBottom: 20 }}>
+      {/* ❗ Title outside the box (same as screenshot) */}
+      <Text style={styles.subjectTitleOutside}>{data.name}</Text>
 
-      <View style={styles.subjectContentRow}>
-
-        <View style={[styles.subjectIconContainer, { backgroundColor: data.iconBgColor }]}>
-          <Image
-            source={images[data.id]}
-            style={styles.subjectIconImage}
-            resizeMode="contain"
-          />
-        </View>
-
-        <View style={styles.subjectDetailsColumn}>
-          <View style={styles.descriptionRow}>
-            <Text style={styles.subjectDescription}>{data.description}</Text>
-            <Text style={styles.subjectPercentage}>{data.percentage}%</Text>
+      <Pressable
+        style={[styles.subjectCard, { backgroundColor: data.cardBgColor }]}
+        onPress={() => router.push(`/(app)/subject/${data.id}`)}
+      >
+        <View style={styles.row}>
+          {/* Icon box */}
+          <View style={[styles.iconBox, { backgroundColor: data.iconBgColor }]}>
+            <Image
+              source={images[data.id]}
+              style={styles.iconImage}
+              resizeMode="contain"
+            />
           </View>
 
-          <View style={styles.progressBarContainer}>
+          {/* Right side content */}
+          <View style={styles.rightColumn}>
+            {/* Description + percentage in ONE ROW */}
+            <View style={styles.descRow}>
+              <Text style={styles.description}>{data.description}</Text>
+              <Text style={styles.percentageText}>{data.percentage}%</Text>
+            </View>
+
+            {/* Progress + percentage ends at the right */}
             <View style={styles.progressBarBackground}>
               <View
                 style={[
-                  styles.progressBarFill,
+                  styles.progressFill,
                   { width: `${data.percentage}%`, backgroundColor: data.iconColor },
                 ]}
               />
             </View>
           </View>
         </View>
-
-      </View>
-    </Pressable>
+      </Pressable>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
+  /** Title outside (above the card box) */
+  subjectTitleOutside: {
+    fontFamily: Fonts.semiBold,
+    fontSize: 15,
+    color: "#222",
+    marginBottom: 20,
+    marginLeft: 4,
+  },
+
   subjectCard: {
-    backgroundColor: Colors.white,
-    borderRadius: 15,
-    padding: 20,
-    marginBottom: 10,
+    borderRadius: 20,
+    paddingVertical: 18,
+    paddingHorizontal: 16,
     borderWidth: 1,
-    borderColor: "#EFEFEF",
+    borderColor: "#AFAFAF",
+
     ...Platform.select({
       ios: {
         shadowColor: "#000",
         shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.05,
-        shadowRadius: 2,
+        shadowOpacity: 0.06,
+        shadowRadius: 3,
       },
       android: {
         elevation: 1,
       },
     }),
   },
-  subjectName: {
-    fontFamily: Fonts.semiBold,
-    fontSize: 16,
-    color: Colors.text,
-    marginBottom: 10,
-  },
-  subjectContentRow: {
+
+  row: {
     flexDirection: "row",
     alignItems: "flex-start",
   },
-  subjectDetailsColumn: {
-    flex: 1,
-    marginLeft: 15,
-  },
-  subjectIconContainer: {
-    width: 60,
-    height: 60,
-    borderRadius: 10,
+
+  /** Icon box */
+  iconBox: {
+    width: 72,
+    height: 72,
+    borderRadius: 16,
     justifyContent: "center",
     alignItems: "center",
   },
-  subjectIconImage: {
-    width: 40,
-    height: 40,
+
+  iconImage: {
+    width: 50,
+    height: 50,
   },
-  descriptionRow: {
+
+  /** Right Column */
+  rightColumn: {
+    flex: 1,
+    marginLeft: 14,
+  },
+
+  /** Description and percentage */
+  descRow: {
     flexDirection: "row",
     justifyContent: "space-between",
+    alignItems: "flex-start",
   },
-  subjectDescription: {
+
+  description: {
     flex: 1,
     fontFamily: Fonts.regular,
-    fontSize: 12,
-    color: Colors.text,
+    fontSize: 12.5,
+    color: "#333",
     lineHeight: 18,
-    marginRight: 10,
+    marginRight: 12,
   },
-  subjectPercentage: {
+
+  percentageText: {
     fontFamily: Fonts.bold,
     fontSize: 14,
-    color: Colors.text,
+    color: "#444",
+    marginTop: 2,
   },
-  progressBarContainer: {
-    marginTop: 5,
-  },
+
+  /** Progress Bar */
   progressBarBackground: {
+    marginTop: 8,
     height: 6,
-    borderRadius: 3,
-    backgroundColor: "#EAEAEA",
+    borderRadius: 6,
+    backgroundColor: "#D7D7D7",
     overflow: "hidden",
   },
-  progressBarFill: {
+
+  progressFill: {
     height: "100%",
-    borderRadius: 3,
+    borderRadius: 6,
   },
 });
