@@ -1,18 +1,19 @@
 import React from "react";
 import { View, Text, Pressable, StyleSheet, Image } from "react-native";
 import { FontAwesome } from "@expo/vector-icons";
-import type { User } from "@/lib/types";
+import { useAuth } from "@/lib/auth";
+import { useRouter } from "expo-router";
 
 const profileAvatar = require("@/assets/images/profile.png");
 
-interface ProfileVisualHeaderProps {
-  user: User | null;
-  
-}
+const ProfileVisualHeader = () => {
+  const { user } = useAuth(); 
+  const router = useRouter();
 
-const ProfileVisualHeader = ({ user }: ProfileVisualHeaderProps) => {
-  const displayName = user?.first_name || "Guest User";
+  const displayName = user?.first_name || "User";
   const usernameDisplay = user?.email ? `@${user.email.split("@")[0]}` : "@username";
+  // Ensure we have a string ID, fallback to "1" or similar if undefined to prevent crash
+  const userId = user?.id ? String(user.id) : "1"; 
 
   return (
     <View style={styles.visualHeaderContainer}>
@@ -25,8 +26,14 @@ const ProfileVisualHeader = ({ user }: ProfileVisualHeaderProps) => {
           <Text style={styles.displayName}>{displayName}</Text>
           <Text style={styles.username}>{usernameDisplay}</Text>
 
-          {/* 👇 ALWAYS visible now */}
-          <Pressable style={styles.editProfileButton}>
+          <Pressable 
+            style={styles.editProfileButton}
+            // FIXED: Use Object Syntax for strict typed routes
+            onPress={() => router.push({
+                pathname: "/profile/[id]",
+                params: { id: userId }
+            })} 
+          >
             <FontAwesome name="edit" size={16} color="#FFF" />
             <Text style={styles.editProfileButtonText}>Edit Profile</Text>
           </Pressable>
@@ -36,6 +43,7 @@ const ProfileVisualHeader = ({ user }: ProfileVisualHeaderProps) => {
   );
 };
 
+// ... (Styles remain exactly the same as before)
 const styles = StyleSheet.create({
   visualHeaderContainer: {
     backgroundColor: '#955FAE',
