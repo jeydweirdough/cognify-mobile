@@ -126,6 +126,8 @@ export default function AppLayout() {
         name="assessments"
         options={{
           href: null,
+          headerShown: false,
+          tabBarStyle: { display: 'none' },
         }}
       />
 

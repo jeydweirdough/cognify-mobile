@@ -1,15 +1,23 @@
 import React from "react";
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
+import { useRouter } from "expo-router";
 import { FONT_FAMILY, PRIMARY_COLOR } from "@/constants/cognify-theme";
 
 export default function AssessmentTest() {
+  const router = useRouter();
+
   return (
     <View style={styles.assessmentSection}>
       <Text style={styles.assessmentTitle}>Ready to ace your exam?</Text>
       <Text style={styles.assessmentSubtitle}>
         Help us personalize your review! Take a short test
       </Text>
-      <TouchableOpacity style={styles.assessmentButton} activeOpacity={0.8}>
+
+      <TouchableOpacity
+        style={styles.assessmentButton}
+        activeOpacity={0.8}
+        onPress={() => router.push("/assessments")}
+      >
         <Text style={styles.assessmentButtonText}>Start Assessment Test</Text>
       </TouchableOpacity>
     </View>
