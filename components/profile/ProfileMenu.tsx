@@ -2,10 +2,23 @@ import React from "react";
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
-export default function ProfileMenu({ onLogout }: { onLogout: () => void }) {
+// Add navigation prop
+export default function ProfileMenu({ onLogout, navigation }: { onLogout: () => void, navigation: any }) {
+  // Define the navigation handler for My Account
+  const handleMyAccountPress = () => {
+    // Navigate to the profile route with a placeholder ID (e.g., '123')
+    // Replace '123' with the actual user ID when available
+    navigation.navigate("/profile/[id]");
+  };
+
   return (
     <View style={styles.container}>
-      <MenuItem label="My Account" icon="settings-outline" />
+      {/* 1. Add onPress prop to My Account and link it to the handler */}
+      <MenuItem 
+        label="My Account" 
+        icon="settings-outline" 
+        onPress={handleMyAccountPress} 
+      />
       <MenuItem label="Offline Materials" icon="settings-outline" />
       <MenuItem label="Progress Overview" icon="settings-outline" />
       <MenuItem label="Help and Support" icon="settings-outline" />
@@ -18,6 +31,8 @@ export default function ProfileMenu({ onLogout }: { onLogout: () => void }) {
     </View>
   );
 }
+
+// ... MenuItem and styles remain the same ...
 
 function MenuItem({
   label,
