@@ -1,22 +1,21 @@
 // app/(tabs)/assessments.tsx
-import React, { useState, useEffect, useRef } from 'react';
+import { useRouter } from 'expo-router';
+import React, { useEffect, useRef, useState } from 'react';
 import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  ScrollView,
-  StatusBar,
-  Platform,
-  Image,
   ActivityIndicator,
   Alert,
+  Platform,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
 
-import { useFonts } from 'expo-font';
 import { Ionicons } from '@expo/vector-icons';
+import { useFonts } from 'expo-font';
 
 // --- QUIZ DATA START ---
 const QUIZ_DATA = [

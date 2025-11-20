@@ -161,7 +161,11 @@ Suspendisse pulvinar rutrum leo, eu condimentum massa facilisis et. In at tortor
           <Pressable
             style={styles.quizButton}
             onPress={() => {
-              alert("Navigating to Quiz...");
+              // Navigate to the quiz page, passing the module ID
+              router.push({
+                pathname: '/(app)/quiz/[id]', // Make sure this matches your file structure
+                params: { id: id }
+              });
             }}
           >
             <Text style={styles.quizButtonText}>Take Quiz</Text>

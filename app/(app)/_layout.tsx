@@ -111,9 +111,10 @@ export default function AppLayout() {
       />
 
       <Tabs.Screen
-        name="quiz"
+        name="quiz/[id]"
         options={{
           href: null,
+          tabBarStyle: { display: 'none' },
         }}
       />
 

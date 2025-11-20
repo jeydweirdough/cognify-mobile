@@ -1,249 +1,101 @@
-// app/(tabs)/assessments.tsx
-import React, { useState, useEffect, useRef } from "react";
+import { Feather, Ionicons } from '@expo/vector-icons';
+import { router } from 'expo-router';
+import React, { useEffect, useRef, useState } from 'react';
 import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
+  Alert,
+  Dimensions,
+  Image,
+  Pressable,
+  SafeAreaView,
   ScrollView,
   StatusBar,
-  Platform,
-  Image,
-  ActivityIndicator,
-  Alert,
-} from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { useRouter } from "expo-router";
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
+} from 'react-native';
+import { Fonts } from '../../constants/cognify-theme';
 
-import { useFonts } from "expo-font";
-import { Ionicons } from "@expo/vector-icons";
+const { width } = Dimensions.get('window');
+const INITIAL_TIME_SECONDS = 600; // 10 minutes
 
-// --- QUIZ DATA START ---
+// --- UPDATED DATA: PSYCHOLOGY QUESTIONS ---
 const QUIZ_DATA = [
   {
     id: 1,
-    question:
-      "Which of the following describes the psychological field focused on optimizing human behavior in the workplace?",
+    question: 'Which of the following best defines the primary focus of Industrial-Organizational (I/O) Psychology?',
     options: [
-      { id: "A", text: "Clinical Psychology" },
-      { id: "B", text: "Organizational Development" },
-      { id: "C", text: "Industrial-Organizational Psychology" },
-      { id: "D", text: "Cognitive Psychology" },
+      'Diagnosing and treating mental disorders',
+      'The scientific study of human behavior in the workplace',
+      'Understanding the development of children',
+      'Analyzing the anatomy of the brain'
     ],
-    answerId: "C",
+    correctIndex: 1, // Behavior in workplace
   },
   {
     id: 2,
-    question:
-      "What is the primary goal of the 'Industrial' side of I/O Psychology?",
+    question: "The 'Hawthorne Effect' suggests that employees perform better when:",
     options: [
-      { id: "A", text: "Improving organizational culture and climate" },
-      { id: "B", text: "Managing conflict resolution and team dynamics" },
-      {
-        id: "C",
-        text: "Focusing on personnel issues like selection and training",
-      },
-      { id: "D", text: "Studying consumer behavior and marketing" },
+      'They are paid higher wages',
+      'The lighting in the room is increased',
+      'They know they are being observed or receive attention',
+      'They work in isolation'
     ],
-    answerId: "C",
+    correctIndex: 2, // Observed/Attention
   },
   {
     id: 3,
-    question:
-      "The 'Hawthorne Effect' primarily demonstrated the impact of which factor on worker productivity?",
+    question: "In the context of Job Analysis, what does the acronym KSAO stand for?",
     options: [
-      { id: "A", text: "Financial incentives and bonuses" },
-      { id: "B", text: "The physical conditions of the work environment" },
-      { id: "C", text: "Attention paid to workers and social factors" },
-      { id: "D", text: "Automation and technological upgrades" },
+      'Knowledge, Skills, Abilities, and Other characteristics',
+      'Key Systems, Analysis, and Objectives',
+      'Knowledge, Strategy, Action, and Organization',
+      'Key Skills, Aptitude, and Operations'
     ],
-    answerId: "C",
+    correctIndex: 0, // Knowledge, Skills...
   },
   {
     id: 4,
-    question:
-      "Which term refers to the process of gathering and analyzing information about a job's content, context, and human requirements?",
+    question: "Which theory of motivation suggests that human needs are arranged in a hierarchy, starting with physiological needs?",
     options: [
-      { id: "A", text: "Performance Appraisal" },
-      { id: "B", text: "Job Analysis" },
-      { id: "C", text: "Recruitment Strategy" },
-      { id: "D", text: "Ergonomics" },
+      "Herzberg's Two-Factor Theory",
+      "Vroom's Expectancy Theory",
+      "Maslow's Hierarchy of Needs",
+      "Adams' Equity Theory"
     ],
-    answerId: "B",
+    correctIndex: 2, // Maslow
   },
   {
     id: 5,
-    question: "What is the main purpose of a '360-degree feedback' system?",
+    question: "Which leadership style is characterized by the leader making all decisions with little to no input from the team?",
     options: [
-      { id: "A", text: "To assess customer satisfaction with the product" },
-      {
-        id: "B",
-        text: "To measure an employee's performance from multiple sources (peers, supervisors, subordinates)",
-      },
-      { id: "C", text: "To review the financial status of the organization" },
-      { id: "D", text: "To survey employee morale anonymously" },
+      'Transformational Leadership',
+      'Democratic Leadership',
+      'Laissez-faire Leadership',
+      'Autocratic Leadership'
     ],
-    answerId: "B",
-  },
-  {
-    id: 6,
-    question:
-      "Which leadership theory emphasizes that a leader's effectiveness is contingent upon the situation?",
-    options: [
-      { id: "A", text: "Great Man Theory" },
-      { id: "B", text: "Trait Theory" },
-      { id: "C", text: "Contingency Theory" },
-      { id: "D", text: "Transactional Leadership" },
-    ],
-    answerId: "C",
-  },
-  {
-    id: 7,
-    question:
-      "A high-scoring employee is promoted based solely on their excellent performance in their current role, despite lacking the necessary managerial skills. This illustrates which cognitive bias?",
-    options: [
-      { id: "A", text: "Recency Bias" },
-      { id: "B", text: "Confirmation Bias" },
-      { id: "C", text: "Halo Effect" },
-      { id: "D", text: "Leniency Error" },
-    ],
-    answerId: "C",
-  },
-  {
-    id: 8,
-    question:
-      "According to Herzberg's Two-Factor Theory, which of the following is considered a 'motivator' rather than a 'hygiene' factor?",
-    options: [
-      { id: "A", text: "Salary and benefits" },
-      { id: "B", text: "Company policies" },
-      { id: "C", text: "Working conditions" },
-      { id: "D", text: "Recognition and achievement" },
-    ],
-    answerId: "D",
-  },
-  {
-    id: 9,
-    question:
-      "What is the term for a systematic approach to teaching workers the skills, knowledge, and abilities necessary to perform their jobs effectively?",
-    options: [
-      { id: "A", text: "Work-Life Balance" },
-      { id: "B", text: "Human Resources Planning" },
-      { id: "C", text: "Organizational Culture" },
-      { id: "D", text: "Training and Development" },
-    ],
-    answerId: "D",
-  },
-  {
-    id: 10,
-    question:
-      "Which theory suggests that employee motivation is tied to their belief that their effort will lead to performance, and that performance will lead to desirable outcomes?",
-    options: [
-      { id: "A", text: "Equity Theory" },
-      { id: "B", text: "Goal-Setting Theory" },
-      { id: "C", text: "Expectancy Theory" },
-      { id: "D", text: "Maslow's Hierarchy" },
-    ],
-    answerId: "C",
+    correctIndex: 3, // Autocratic
   },
 ];
-// --- QUIZ DATA END ---
 
-// --- COLOR AND FONT CONSTANTS ---
-const COLORS = {
-  // AssessmentStartScreen Colors
-  primaryGreen: "#549454",
-  primaryPurple: "#6E3D84",
-  // AssessmentScreen Colors
-  primary: "#545099",
-  primaryBlue: "#104A8E",
-  secondaryBeige: "#EAFEFF",
-  goldText: "#5C5428",
-  borderColor: "#4B3E62",
-  shadow: "#000",
-  progressBarBackground: "#D0D0D0",
-
-  // Shared Colors
-  bodyText: "#555555",
-  white: "#FAFFFF",
-};
-
-const FONTS = {
-  poppinsRegular: "Poppins-Regular",
-  lexendRegular: "LexendDeca-Regular",
-  lexendMedium: "LexendDeca-Medium",
-};
-
-// Initial time in seconds (e.g., 10 minutes * 60 seconds)
-const INITIAL_TIME_SECONDS = 600;
-
-// --- PROGRESS BAR COMPONENT ---
-interface ProgressBarProps {
-  current: number;
-  total: number;
-}
-
-const ProgressBar: React.FC<ProgressBarProps> = ({ current, total }) => {
-  // Calculate percentage, ensuring it doesn't exceed 100%
-  const progressPercent = Math.min((current / total) * 100, 100);
-
-  return (
-    <View style={progressStyles.progressBarContainer}>
-      <View
-        style={[
-          progressStyles.progressBarFill,
-          { width: `${progressPercent}%` },
-        ]}
-      />
-    </View>
-  );
-};
-
-// --- AssessmentStartScreen Component (Initial View) ---
-interface AssessmentStartScreenProps {
-  onStartPress: () => void;
-}
-
-const AssessmentStartScreen: React.FC<AssessmentStartScreenProps> = ({
-  onStartPress,
-}) => {
-  // Load fonts here or pass down the load state if loaded at root
-  // For simplicity and adherence to the prompt, we load here
-  const [fontsLoaded] = useFonts({
-    [FONTS.poppinsRegular]: require("@/assets/fonts/Poppins-Regular.ttf"),
-    [FONTS.lexendRegular]: require("@/assets/fonts/LexendDeca-Regular.ttf"),
-    [FONTS.lexendMedium]: require("@/assets/fonts/LexendDeca-Medium.ttf"),
-  });
-
-  if (!fontsLoaded) {
-    return (
-      <View style={[startStyles.container, { justifyContent: "center" }]}>
-        <ActivityIndicator size="large" color={COLORS.primaryPurple} />
-      </View>
-    );
-  }
-
+// --- START SCREEN ---
+const AssessmentStartScreen = ({ onStartPress }: { onStartPress: () => void }) => {
   return (
     <View style={startStyles.container}>
       <Text style={startStyles.title}>
-        Let's Get Started{"\n"}with Your Baseline Knowledge
+        Let's Get Started{'\n'}with Your Baseline Knowledge
       </Text>
-     
-      {/* Placeholder for the image */}
-      {/* Assuming '@/assets/images/got_this.png' exists */}
       <View style={startStyles.illustrationContainer}>
-         <Image
-    source={require('@/assets/images/got_this.png')}
-    style={{ width: 140, height: 140, resizeMode: 'contain' }}
-  />
+        <Image
+          source={require('@/assets/images/got_this.png')}
+          style={{ width: 140, height: 140, resizeMode: 'contain' }}
+        />
       </View>
-
       <Text style={startStyles.subtitle}>You got this!</Text>
-
       <Text style={startStyles.description}>
         This quick assessment helps us understand your current strengths and
         learning needs. Your results will guide your personalized study plan.
       </Text>
-
       <TouchableOpacity style={startStyles.button} onPress={onStartPress}>
         <Text style={startStyles.buttonText}>START NOW!</Text>
       </TouchableOpacity>
@@ -251,547 +103,478 @@ const AssessmentStartScreen: React.FC<AssessmentStartScreenProps> = ({
   );
 };
 
-// --- AssessmentScreen Component (Quiz View) ---
-const AssessmentScreen: React.FC = () => {
-  const router = useRouter();
-
-  const [fontsLoaded] = useFonts({
-    [FONTS.poppinsRegular]: require("@/assets/fonts/Poppins-Regular.ttf"),
-    [FONTS.lexendRegular]: require("@/assets/fonts/LexendDeca-Regular.ttf"),
-    [FONTS.lexendMedium]: require("@/assets/fonts/LexendDeca-Medium.ttf"),
-  });
-
-  // --- TIMER STATE & LOGIC ---
-  const [timeLeft, setTimeLeft] = useState(INITIAL_TIME_SECONDS);
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  // Function to format seconds into MM:SS string
-  const formatTime = (totalSeconds: number) => {
-    const minutes = Math.floor(totalSeconds / 60);
-    const seconds = totalSeconds % 60;
-    return `${minutes.toString().padStart(2, "0")}:${seconds
-      .toString()
-      .padStart(2, "0")}`;
-  };
-
-  const submitQuiz = (timedOut = false) => {
-    // Stop the timer
-    if (timerRef.current) {
-      clearInterval(timerRef.current);
-    }
-    const message = timedOut
-      ? "Your quiz has been automatically submitted."
-      : "Your results are being processed.";
-
-    Alert.alert(timedOut ? "Time's Up!" : "Quiz Finished!", message);
-
-    // After submission, maybe navigate to a results screen or back to the start
-    // router.push('/results');
-  };
-
-  useEffect(() => {
-    // Start the countdown timer
-    timerRef.current = setInterval(() => {
-      setTimeLeft((prevTime) => {
-        if (prevTime <= 1) {
-          submitQuiz(true); // Handle timeout submission
-          return 0;
-        }
-        return prevTime - 1;
-      });
-    }, 1000);
-
-    // Cleanup function to clear the interval when the component unmounts
-    return () => {
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-      }
-    };
-  }, []);
-
-  // --- QUIZ STATE & LOGIC ---
-  // Start at question index 0 for a fresh start, not 5 as in the prompt example.
+// --- MAIN SCREEN ---
+export default function AssessmentsScreen() {
+  // --- STATE ---
+  const [isQuizStarted, setIsQuizStarted] = useState(false);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [userAnswers, setUserAnswers] = useState<Record<number, string | null>>(
-    {}
-  );
+  const [selectedOptionIndex, setSelectedOptionIndex] = useState<number | null>(null);
+  const [score, setScore] = useState(0);
+  const [isQuizFinished, setIsQuizFinished] = useState(false);
+  const [isReviewing, setIsReviewing] = useState(false);
+  const [isDarkMode, setIsDarkMode] = useState(false);
+
+  // User Answers Storage
+  const [userAnswers, setUserAnswers] = useState<(number | null)[]>(new Array(QUIZ_DATA.length).fill(null));
+
+  // Timer State
+  const [timeLeft, setTimeLeft] = useState(INITIAL_TIME_SECONDS);
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // --- THEME COLORS ---
+  const themeColors = {
+    background: isDarkMode ? '#121212' : '#F8F9FA',
+    textPrimary: isDarkMode ? '#FFFFFF' : '#000000',
+    textSecondary: isDarkMode ? '#B0B0B0' : '#666666',
+    cardBg: isDarkMode ? '#1E1E1E' : '#FFFFFF',
+    optionBorder: isDarkMode ? '#333333' : '#E0E0E0',
+    optionSelectedBg: '#381E72',
+    questionCardBg: '#EAFEFF',
+    questionCardText: '#5C5428',
+    questionCardBorder: '#4B3E62',
+  };
 
   const currentQuestion = QUIZ_DATA[currentQuestionIndex];
-  const selectedOption = currentQuestion
-    ? userAnswers[currentQuestion.id] || null
-    : null; // Handle case where currentQuestion is undefined
+  const progressPercent = ((currentQuestionIndex + 1) / QUIZ_DATA.length) * 100;
 
-  const handleSelectOption = (optionId: string) => {
-    if (!currentQuestion) return; // Safety check
-    setUserAnswers((prevAnswers) => ({
-      ...prevAnswers,
-      [currentQuestion.id]: optionId,
-    }));
+  // --- TIMER LOGIC ---
+  useEffect(() => {
+    if (isQuizStarted && !isQuizFinished) {
+      timerRef.current = setInterval(() => {
+        setTimeLeft((prev) => {
+          if (prev <= 1) {
+            finishQuiz(true);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, [isQuizStarted, isQuizFinished]);
+
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
+
+  // --- HANDLERS ---
+  const handleStart = () => setIsQuizStarted(true);
 
   const handleNext = () => {
+    const updatedAnswers = [...userAnswers];
+    updatedAnswers[currentQuestionIndex] = selectedOptionIndex;
+    setUserAnswers(updatedAnswers);
+
+    if (selectedOptionIndex === currentQuestion.correctIndex) {
+      setScore(prev => prev + 1);
+    }
+
     if (currentQuestionIndex < QUIZ_DATA.length - 1) {
-      setCurrentQuestionIndex((prevIndex) => prevIndex + 1);
+      setCurrentQuestionIndex(prev => prev + 1);
+      setSelectedOptionIndex(null);
     } else {
-      // Logic for final submission
-      submitQuiz();
+      finishQuiz(false);
     }
   };
 
-  const handlePrev = () => {
-    if (currentQuestionIndex > 0) {
-      setCurrentQuestionIndex((prevIndex) => prevIndex - 1);
-    }
+  const finishQuiz = (timedOut = false) => {
+    setIsQuizFinished(true);
+    if (timerRef.current) clearInterval(timerRef.current);
+    if (timedOut) Alert.alert("Time's Up!", "Your assessment was submitted automatically.");
   };
 
-  if (!fontsLoaded) {
-    return <View style={styles.loadingContainer} />;
-  }
-
-  if (!currentQuestion) {
-    // Should not happen with current logic, but a safety fallback
+  // --- RENDER: START SCREEN ---
+  if (!isQuizStarted) {
     return (
-      <View style={styles.loadingContainer}>
-        <Text>Error loading question data.</Text>
-      </View>
+      <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
+        <StatusBar barStyle="dark-content" />
+        <AssessmentStartScreen onStartPress={handleStart} />
+      </SafeAreaView>
     );
   }
 
-  // Derived properties for display
-  const isFirstQuestion = currentQuestionIndex === 0;
-  const isLastQuestion = currentQuestionIndex === QUIZ_DATA.length - 1;
-  const isTimeRunningOut = timeLeft <= 60 && timeLeft > 0;
+  // --- RENDER: REVIEW SCREEN (UPDATED HEADER) ---
+  if (isReviewing) {
+    return (
+      <SafeAreaView style={[styles.container, { backgroundColor: '#FFFFFF' }]}>
+        <StatusBar barStyle="dark-content" />
 
-  // Progress bar values (Note: current is questions COMPLETED, not current index)
-  const completedQuestions = currentQuestionIndex + 1;
-  const totalQuestions = QUIZ_DATA.length;
+        {/* Review Header - Updated */}
+        <View style={styles.reviewHeader}>
 
-  return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#F5F9FA" />
-
-      <ScrollView contentContainerStyle={styles.scrollContainer}>
-        {/* --- Header Section --- */}
-        <View style={styles.header}>
-          {/* Back Button */}
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => router.push("/")} // navigate to home
-            disabled={timeLeft === 0}
+          {/* Back To Home Button (Arrow + Text) */}
+          <Pressable
+            style={styles.reviewBackButton}
+            onPress={() => router.push('/')} // Navigate to Home
           >
-            <Ionicons name="chevron-back" size={24} color={COLORS.white} />
-          </TouchableOpacity>
+            <Ionicons name="arrow-back" size={20} color="#381E72" />
+            <Text style={styles.reviewBackText}>Back to Home</Text>
+          </Pressable>
 
-          {/* Title */}
-          <View style={styles.headerTextContainer}>
-            <Text style={styles.headerTitle}>
-              Introduction to Industrial and{"\n"}Organizational Psychology
+          <View style={styles.reviewTitleContainer}>
+            <Text style={styles.reviewHeaderTitle} numberOfLines={2}>
+              Introduction to Industrial and Organizational Psychology
             </Text>
-            <Text style={styles.headerSubtitle}>10 Questions</Text>
+            <Text style={styles.reviewHeaderSubtitle}>Review Answers</Text>
+          </View>
+
+        </View>
+
+        <ScrollView contentContainerStyle={styles.reviewScrollContent}>
+          {QUIZ_DATA.map((question, index) => {
+            const userAnswerIndex = userAnswers[index];
+            const isCorrect = userAnswerIndex === question.correctIndex;
+
+            return (
+              <View key={question.id} style={styles.reviewQuestionContainer}>
+                <View style={styles.reviewQuestionLabelContainer}>
+                  <Text style={styles.reviewQuestionLabel}>Question {index + 1}</Text>
+                  <View style={styles.reviewUnderline} />
+                </View>
+                <Text style={styles.reviewQuestionText}>{question.question}</Text>
+
+                {!isCorrect && userAnswerIndex !== null && (
+                  <View style={styles.reviewAnswerRow}>
+                    <Ionicons name="close-circle" size={24} color="#FF5252" />
+                    <Text style={[styles.reviewAnswerText, { color: '#FF5252' }]}>
+                      {question.options[userAnswerIndex]}
+                    </Text>
+                  </View>
+                )}
+
+                <View style={styles.reviewAnswerRow}>
+                  <Ionicons name="checkmark-circle" size={24} color="#2E7D32" />
+                  <Text style={[styles.reviewAnswerText, { color: '#2E7D32' }]}>
+                    {question.options[question.correctIndex]}
+                  </Text>
+                </View>
+              </View>
+            );
+          })}
+        </ScrollView>
+      </SafeAreaView>
+    );
+  }
+
+  // --- RENDER: RESULT SCREEN ---
+  if (isQuizFinished) {
+    const finalScore = selectedOptionIndex === currentQuestion.correctIndex ? score + 1 : score;
+    const passed = finalScore >= (QUIZ_DATA.length / 2); // 50% passing
+
+    // Dynamic variables for Pass vs Fail
+    const titleText = passed ? "Excellent!" : "Keep Trying!";
+    const titleColor = passed ? "#4CAF50" : "#E53935"; // Green vs Red
+    const iconName = passed ? "happy" : "sad";
+    const iconColor = passed ? "#FFC107" : "#BDBDBD"; // Gold vs Grey
+    const starColor = passed ? "#FFC107" : "#E0E0E0"; // Gold vs Light Grey
+
+    return (
+      <SafeAreaView style={[styles.container, { backgroundColor: '#FFFFFF' }]}>
+        <View style={styles.resultContainer}>
+
+          <Text style={[styles.resultTitleText, { color: titleColor }]}>
+            {titleText}
+          </Text>
+
+          <View style={styles.smileyContainer}>
+            <Ionicons name={iconName} size={100} color={iconColor} />
+          </View>
+
+          <View style={styles.starsRow}>
+            <Ionicons name="star" size={32} color={starColor} style={styles.starSide} />
+            <Ionicons name="star" size={42} color={starColor} style={styles.starCenter} />
+            <Ionicons name="star" size={32} color={starColor} style={styles.starSide} />
+          </View>
+
+          <Text style={styles.mockText}>Mock # 1</Text>
+
+          <Text style={[styles.passedText, { color: passed ? '#6E3D84' : '#D32F2F' }]}>
+            {passed ? "Exam Passed !" : "Exam Failed"}
+          </Text>
+
+          <Text style={styles.scoreDescription}>
+            You answered {finalScore} out of {QUIZ_DATA.length} questions correctly.
+          </Text>
+
+          <Pressable
+            style={styles.reviewButton}
+            onPress={() => setIsReviewing(true)}
+          >
+            <Text style={styles.reviewButtonText}>Review Answers</Text>
+          </Pressable>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  // --- RENDER: QUIZ SCREEN ---
+  return (
+    <SafeAreaView style={[styles.container, { backgroundColor: themeColors.background }]}>
+      <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} />
+
+      <View style={styles.header}>
+        <Pressable style={styles.backButton} onPress={() => Alert.alert("Exit?", "Progress will be lost", [{ text: "Cancel" }, { text: "Exit", onPress: () => router.back() }])}>
+          <Ionicons name="chevron-back" size={24} color="#FFF" />
+        </Pressable>
+        <Text style={[styles.headerTitle, { color: themeColors.textPrimary }]}>
+          Assessment
+        </Text>
+        <Pressable style={styles.iconButton} onPress={() => setIsDarkMode(!isDarkMode)}>
+          <Feather name={isDarkMode ? "sun" : "moon"} size={24} color={themeColors.textPrimary} />
+        </Pressable>
+      </View>
+
+      <View style={styles.fixedTopContainer}>
+        <View style={styles.progressContainer}>
+          <View style={[styles.progressBarTrack, { backgroundColor: isDarkMode ? '#333' : '#E0E0E0' }]}>
+            <View style={[styles.progressBarFill, { width: `${progressPercent}%` }]} />
           </View>
         </View>
 
-        {/* --- PROGRESS BAR --- */}
-        <ProgressBar current={completedQuestions} total={totalQuestions} />
-        {/* --- END PROGRESS BAR --- */}
-
-        {/* --- Timer Pill --- */}
         <View style={styles.timerContainer}>
-          <View
-            style={[
-              styles.timerPill,
-              isTimeRunningOut && styles.timerPillWarning,
-              timeLeft === 0 && styles.timerPillDisabled,
-            ]}
-          >
-            <Ionicons
-              name="time-outline"
-              size={18}
-              color={
-                timeLeft === 0 ? "#999" : isTimeRunningOut ? "red" : "#333"
-              }
-            />
-            <Text
-              style={[
-                styles.timerText,
-                isTimeRunningOut && styles.timerTextWarning,
-                timeLeft === 0 && styles.timerTextDisabled,
-              ]}
-            >
+          <View style={[styles.timerPill, { backgroundColor: themeColors.cardBg, borderColor: themeColors.optionBorder }]}>
+            <Ionicons name="time-outline" size={16} color={timeLeft < 60 ? "red" : themeColors.textSecondary} />
+            <Text style={[styles.timerText, { color: timeLeft < 60 ? "red" : themeColors.textPrimary }]}>
               {formatTime(timeLeft)}
             </Text>
           </View>
         </View>
+      </View>
 
-        {/* --- Question Card --- */}
-        <View style={styles.questionCard}>
-          <Text style={styles.questionCounter}>
-            Question {currentQuestionIndex + 1}/{QUIZ_DATA.length}:
+      <ScrollView contentContainerStyle={styles.scrollContent}>
+        <View style={[
+          styles.questionCard,
+          {
+            backgroundColor: themeColors.questionCardBg,
+            borderColor: themeColors.questionCardBorder
+          }
+        ]}>
+          <Text style={[styles.questionCounter, { color: '#333' }]}>
+            Question {currentQuestionIndex + 1}
           </Text>
-          <Text style={styles.questionText}>{currentQuestion.question}</Text>
+          <Text style={[styles.questionText, { color: themeColors.questionCardText }]}>
+            {currentQuestion.question}
+          </Text>
         </View>
 
-        {/* --- Answer Options --- */}
         <View style={styles.optionsContainer}>
-          {currentQuestion.options.map((option) => {
-            const isSelected = selectedOption === option.id;
-
+          {currentQuestion.options.map((option, index) => {
+            const isSelected = selectedOptionIndex === index;
             return (
-              <TouchableOpacity
-                key={option.id}
+              <Pressable
+                key={index}
                 style={[
-                  styles.optionButton,
-                  isSelected && styles.optionButtonSelected,
-                  timeLeft === 0 && styles.optionButtonDisabled,
+                  styles.optionCard,
+                  {
+                    backgroundColor: isSelected ? themeColors.optionSelectedBg : themeColors.cardBg,
+                    borderColor: isSelected ? themeColors.optionSelectedBg : themeColors.optionBorder,
+                  }
                 ]}
-                onPress={() => handleSelectOption(option.id)}
-                activeOpacity={0.8}
-                disabled={timeLeft === 0}
+                onPress={() => setSelectedOptionIndex(index)}
               >
-                <Text
-                  style={[
-                    styles.optionText,
-                    isSelected && styles.optionTextSelected,
-                    timeLeft === 0 && styles.optionTextDisabled,
-                  ]}
-                >
-                  {option.id}. {option.text}
+                <View style={[
+                  styles.radioCircle,
+                  { borderColor: isSelected ? '#FFF' : themeColors.textSecondary }
+                ]}>
+                  {isSelected && <View style={styles.radioFill} />}
+                </View>
+                <Text style={[
+                  styles.optionText,
+                  { color: isSelected ? '#FFF' : themeColors.textPrimary }
+                ]}>
+                  {option}
                 </Text>
-              </TouchableOpacity>
+              </Pressable>
             );
           })}
         </View>
-
-        {/* --- Navigation Footer --- */}
-        <View style={styles.footer}>
-          {/* Previous Button (Disabled on the first question or if time is 0) */}
-          <TouchableOpacity
-            style={[
-              styles.navButton,
-              (isFirstQuestion || timeLeft === 0) && styles.navButtonDisabled,
-            ]}
-            onPress={handlePrev}
-            disabled={isFirstQuestion || timeLeft === 0}
-          >
-            <Text
-              style={[
-                styles.navButtonText,
-                (isFirstQuestion || timeLeft === 0) &&
-                  styles.navButtonTextDisabled,
-              ]}
-            >
-              Previous
-            </Text>
-          </TouchableOpacity>
-
-          {/* Next Button (Text changes to 'Submit' on the last question, disabled if time is 0) */}
-          <TouchableOpacity
-            style={[
-              styles.navButton,
-              timeLeft === 0 && styles.navButtonDisabled,
-            ]}
-            onPress={handleNext}
-            disabled={timeLeft === 0}
-          >
-            <Text
-              style={[
-                styles.navButtonText,
-                timeLeft === 0 && styles.navButtonTextDisabled,
-              ]}
-            >
-              {isLastQuestion ? "Submit" : "Next"}
-            </Text>
-          </TouchableOpacity>
-        </View>
       </ScrollView>
-    </SafeAreaView>
-  );
-};
 
-// --- MAIN EXPORT COMPONENT ---
-export default function AssessmentsScreen() {
-  const [isQuizStarted, setIsQuizStarted] = useState(false);
+      <View style={[styles.footer, { backgroundColor: themeColors.background }]}>
+        <Pressable
+          style={[
+            styles.primaryButton,
+            selectedOptionIndex === null && styles.disabledButton
+          ]}
+          onPress={handleNext}
+          disabled={selectedOptionIndex === null}
+        >
+          <Text style={styles.primaryButtonText}>
+            {currentQuestionIndex === QUIZ_DATA.length - 1 ? "Submit Assessment" : "Next Question"}
+          </Text>
+          <Ionicons name="arrow-forward" size={20} color="#FFF" />
+        </Pressable>
+      </View>
 
-  const handleStartPress = () => {
-    setIsQuizStarted(true);
-  };
-
-  return (
-    <SafeAreaView style={{ flex: 1 }}>
-      {isQuizStarted ? (
-        <AssessmentScreen />
-      ) : (
-        <AssessmentStartScreen onStartPress={handleStartPress} />
-      )}
     </SafeAreaView>
   );
 }
 
 // --- STYLES ---
-
-// AssessmentStartScreen Styles
 const startStyles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.white,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 24,
-  },
-  illustrationContainer: {
-    width: 160,
-    height: 160,
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 24,
-    borderRadius: 8,
+    backgroundColor: '#FFFFFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 30,
+    paddingVertical: 40,
   },
   title: {
-    fontFamily: FONTS.lexendMedium,
-    fontSize: 28,
-    color: COLORS.primaryGreen,
-    textAlign: "center",
-    marginBottom: 24,
+    fontFamily: Fonts.bold,
+    fontSize: 26,
+    color: '#4CAF50',
+    textAlign: 'center',
+    lineHeight: 34,
+    marginBottom: 30,
   },
+  illustrationContainer: { marginBottom: 30, alignItems: 'center', justifyContent: 'center' },
   subtitle: {
-    fontFamily: FONTS.lexendMedium,
-    fontSize: 22,
-    color: COLORS.primaryPurple,
-    marginBottom: 16,
+    fontFamily: Fonts.bold, fontSize: 22, color: '#6E3D84', marginBottom: 12, textAlign: 'center',
   },
   description: {
-    fontFamily: FONTS.poppinsRegular,
-    fontSize: 14,
-    color: COLORS.bodyText,
-    textAlign: "center",
-    paddingHorizontal: 25,
-    marginBottom: 50,
-    lineHeight: 24,
+    fontFamily: Fonts.regular, fontSize: 15, color: '#333333', textAlign: 'center', marginBottom: 50, lineHeight: 22,
   },
   button: {
-    backgroundColor: COLORS.primaryPurple,
-    paddingVertical: 16,
-    paddingHorizontal: 40,
-    borderRadius: 50,
-    shadowColor: COLORS.primaryPurple,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 6,
-    elevation: 8,
-    marginTop: 50,
+    backgroundColor: '#6E3D84', paddingVertical: 16, width: '100%', borderRadius: 30, alignItems: 'center',
+    shadowColor: '#6E3D84', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 6, elevation: 6,
   },
   buttonText: {
-    fontFamily: FONTS.lexendMedium,
-    color: COLORS.white,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    fontSize: 18,
+    fontFamily: Fonts.bold, color: '#FFFFFF', fontSize: 16, letterSpacing: 1,
   },
 });
 
-// Progress Bar Styles
-const progressStyles = StyleSheet.create({
-  progressBarContainer: {
-    height: 10,
-    width: "95%",
-    backgroundColor: COLORS.progressBarBackground, // Light grey background
-    borderRadius: 5,
-    marginVertical: 10,
-    overflow: "hidden", // Important to keep the fill within the bounds
-    marginHorizontal: 10,
-    borderWidth: 1,
-    borderColor: "#AAAAAA",
-  },
-  progressBarFill: {
-    height: "100%",
-    backgroundColor: COLORS.primaryBlue, // Primary blue color for progress
-    borderRadius: 5,
-  },
-});
-
-// AssessmentScreen (Quiz) Styles
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#F5F9FA", // Light bluish-white background from screenshot
-  },
-  loadingContainer: {
-    flex: 1,
-    backgroundColor: COLORS.white,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  scrollContainer: {
-    padding: 20,
-    paddingTop: Platform.OS === "android" ? 40 : 10,
-  },
-
-  // Header Styles
+  container: { flex: 1 },
   header: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    marginBottom: 15,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 10,
   },
   backButton: {
-    backgroundColor: COLORS.primary,
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    justifyContent: "center",
-    alignItems: "center",
-    marginTop: 5,
-    zIndex: 10,
+    width: 40, height: 40, borderRadius: 20, backgroundColor: '#381E72', justifyContent: 'center', alignItems: 'center',
   },
-  headerTextContainer: {
-    flex: 1,
-    marginLeft: -20,
-    alignItems: "center",
+  iconButton: { padding: 8 },
+  headerTitle: { fontFamily: Fonts.bold, fontSize: 18 },
+  fixedTopContainer: { paddingBottom: 10 },
+  progressContainer: { paddingHorizontal: 24, paddingTop: 10, paddingBottom: 10 },
+  progressBarTrack: { height: 8, borderRadius: 4, overflow: 'hidden' },
+  progressBarFill: { height: '100%', backgroundColor: '#381E72', borderRadius: 4 },
+  timerContainer: { alignItems: 'center', marginBottom: 5 },
+  timerPill: { flexDirection: 'row', alignItems: 'center', paddingVertical: 6, paddingHorizontal: 16, borderRadius: 20, borderWidth: 1, gap: 6 },
+  timerText: { fontFamily: Fonts.semiBold, fontSize: 14 },
+  scrollContent: { paddingHorizontal: 24, paddingBottom: 120 },
+  questionCard: {
+    borderRadius: 12, padding: 25, marginBottom: 30, borderWidth: 1, minHeight: 180, justifyContent: 'center', alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 3,
   },
-  headerTitle: {
-    fontFamily: FONTS.lexendMedium,
-    fontSize: 14,
-    color: "#000",
-    textAlign: "center",
-    lineHeight: 20,
+  questionCounter: { position: 'absolute', top: 16, left: 20, fontFamily: Fonts.regular, fontSize: 12, opacity: 0.7 },
+  questionText: { fontFamily: Fonts.bold, fontSize: 18, lineHeight: 28, textAlign: 'center', marginTop: 10 },
+  optionsContainer: { gap: 12 },
+  optionCard: { flexDirection: 'row', alignItems: 'center', padding: 16, borderRadius: 12, borderWidth: 1, gap: 12 },
+  optionText: { fontFamily: Fonts.regular, fontSize: 16, flex: 1 },
+  radioCircle: { width: 20, height: 20, borderRadius: 10, borderWidth: 2, justifyContent: 'center', alignItems: 'center' },
+  radioFill: { width: 10, height: 10, borderRadius: 5, backgroundColor: '#FFF' },
+  footer: { padding: 24, position: 'absolute', bottom: 0, left: 0, right: 0 },
+  primaryButton: {
+    backgroundColor: '#381E72', paddingVertical: 16, borderRadius: 30, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, shadowColor: '#381E72', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 4,
   },
-  headerSubtitle: {
-    fontFamily: FONTS.lexendRegular,
-    fontSize: 12,
-    color: "#666",
-    marginTop: 4,
-  },
+  disabledButton: { backgroundColor: '#B0B0B0', shadowOpacity: 0, elevation: 0 },
+  primaryButtonText: { color: '#FFF', fontFamily: Fonts.bold, fontSize: 16 },
 
-  // Timer Styles
-  timerContainer: {
-    alignItems: "flex-end",
+  // --- RESULT STYLES ---
+  resultContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 30 },
+  resultTitleText: { fontFamily: Fonts.bold, fontSize: 32, marginBottom: 24 },
+  smileyContainer: { marginBottom: 20 },
+  starsRow: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'center', marginBottom: 20 },
+  starSide: { marginBottom: 5 },
+  starCenter: { marginHorizontal: 8, marginBottom: 10 },
+  mockText: { fontFamily: Fonts.semiBold, fontSize: 16, color: '#000', marginTop: 10 },
+  passedText: { fontFamily: Fonts.bold, fontSize: 22, marginVertical: 8 },
+  scoreDescription: { fontFamily: Fonts.regular, fontSize: 14, color: '#666', textAlign: 'center', marginBottom: 40 },
+  reviewButton: {
+    backgroundColor: '#6E3D84', paddingVertical: 16, paddingHorizontal: 40, borderRadius: 30, shadowColor: '#6E3D84', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 6, elevation: 5,
+  },
+  reviewButtonText: { color: '#FFF', fontFamily: Fonts.bold, fontSize: 16 },
+
+  // --- REVIEW SCREEN STYLES ---
+  reviewHeader: {
+    flexDirection: 'column',
+    alignItems: 'flex-start',
+    paddingTop: 20,
+    paddingBottom: 10,
+    paddingHorizontal: 20,
+    backgroundColor: '#FFF',
+  },
+  reviewBackButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
     marginBottom: 15,
   },
-  timerPill: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: COLORS.white,
-    paddingVertical: 6,
-    paddingHorizontal: 16,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: "#555",
+  reviewBackText: {
+    color: '#381E72',
+    fontFamily: Fonts.bold,
+    fontSize: 16,
+    marginLeft: 8,
   },
-  timerPillWarning: {
-    borderColor: "red",
-    backgroundColor: "#FFE5E5", // Light red background for warning
+  reviewTitleContainer: {
+    width: '100%',
+    alignItems: 'center',
   },
-  timerPillDisabled: {
-    backgroundColor: "#F0F0F0",
-    borderColor: "#999",
+  reviewHeaderTitle: {
+    fontFamily: Fonts.bold,
+    fontSize: 13,
+    color: '#000',
+    marginBottom: 4,
+    textAlign: 'center',
   },
-  timerText: {
-    fontFamily: FONTS.lexendMedium,
-    fontSize: 14,
-    marginLeft: 6,
-    color: "#333",
+  reviewHeaderSubtitle: {
+    fontFamily: Fonts.regular,
+    fontSize: 12,
+    color: '#666',
+    textAlign: 'center',
   },
-  timerTextWarning: {
-    color: "red",
+  reviewScrollContent: {
+    padding: 20,
+    paddingBottom: 50,
   },
-  timerTextDisabled: {
-    color: "#999",
-  },
-
-  // Question Card Styles
-  questionCard: {
-    backgroundColor: COLORS.secondaryBeige,
-    borderRadius: 12,
-    padding: 25,
+  reviewQuestionContainer: {
     marginBottom: 30,
-    borderWidth: 1,
-    borderColor: "#333",
-    minHeight: 200,
-    justifyContent: "center",
-    marginHorizontal: 10,
   },
-  questionCounter: {
-    fontFamily: FONTS.lexendRegular,
-    fontSize: 14,
-    color: "#333",
-    position: "absolute",
-    top: 20,
-    left: 20,
+  reviewQuestionLabelContainer: {
+    alignSelf: 'flex-start',
+    marginBottom: 10,
   },
-  questionText: {
-    fontFamily: FONTS.lexendMedium,
-    fontSize: 16,
-    color: COLORS.goldText,
-    textAlign: "center",
-    lineHeight: 24,
-    marginTop: 20,
+  reviewQuestionLabel: {
+    fontFamily: Fonts.regular,
+    fontSize: 13,
+    color: '#7C7255',
   },
-
-  // Option Button Styles
-  optionsContainer: {
-    gap: 15,
-    marginBottom: 40,
-    marginHorizontal: 10,
+  reviewUnderline: {
+    height: 1,
+    backgroundColor: '#C5A900',
+    width: '100%',
+    marginTop: 2,
   },
-  optionButton: {
-    backgroundColor: COLORS.white,
-    paddingVertical: 18,
-    paddingHorizontal: 20,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: "#4B3E62",
-    // Shadow for iOS
-    shadowColor: COLORS.shadow,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    // Shadow for Android
-    elevation: 3,
-  },
-  optionButtonSelected: {
-    backgroundColor: COLORS.primary,
-    borderColor: COLORS.primary,
-  },
-  optionButtonDisabled: {
-    backgroundColor: "#EEEEEE",
-    borderColor: "#AAAAAA",
-  },
-  optionText: {
-    fontFamily: FONTS.lexendRegular,
+  reviewQuestionText: {
+    fontFamily: Fonts.bold,
     fontSize: 15,
-    color: COLORS.goldText,
+    color: '#423815',
+    lineHeight: 22,
+    marginBottom: 15,
   },
-  optionTextSelected: {
-    color: COLORS.white,
-  },
-  optionTextDisabled: {
-    color: "#999999",
-  },
-
-  // Footer / Navigation Styles (with new disabled styles)
-  footer: {
-    flexDirection: "row",
-    justifyContent: "flex-end",
+  reviewAnswerRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
     gap: 10,
-    marginBottom: 50,
-    marginHorizontal: 10,
+    marginBottom: 8,
   },
-  navButton: {
-    backgroundColor: COLORS.primaryBlue,
-    paddingVertical: 10,
-    paddingHorizontal: 24,
-    borderRadius: 8,
-    minWidth: 100,
-    alignItems: "center",
-  },
-  navButtonDisabled: {
-    backgroundColor: "#99AABB", // A lighter blue/grey for disabled state
-  },
-  navButtonText: {
-    fontFamily: FONTS.lexendRegular,
-    color: COLORS.white,
-    fontSize: 16,
-  },
-  navButtonTextDisabled: {
-    color: "#DDDDDD",
+  reviewAnswerText: {
+    fontFamily: Fonts.semiBold,
+    fontSize: 14,
+    flex: 1,
+    lineHeight: 20,
+    marginTop: 2,
   },
 });
