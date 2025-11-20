@@ -1,8 +1,8 @@
+import { FontAwesome } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
 import React from 'react';
-import { FontAwesome } from '@expo/vector-icons';
-import { Colors } from '../../constants/cognify-theme';
 import { Platform } from 'react-native';
+import { Colors } from '../../constants/cognify-theme';
 
 const Icon = ({ 
   name, 
@@ -98,6 +98,7 @@ export default function AppLayout() {
         name="subject/[id]"
         options={{
           href: null,
+          tabBarStyle: { display: 'none' },
         }}
       />
       
@@ -105,6 +106,7 @@ export default function AppLayout() {
         name="module/[id]"
         options={{
           href: null,
+          tabBarStyle: { display: 'none' },
         }}
       />
 
