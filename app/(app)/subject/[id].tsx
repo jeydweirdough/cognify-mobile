@@ -1,143 +1,209 @@
-import { useEffect, useState } from 'react';
+import { FontAwesome, Ionicons } from '@expo/vector-icons';
+import { router, Stack, useFocusEffect, useLocalSearchParams, useNavigation } from 'expo-router';
+import { useCallback, useLayoutEffect, useState } from 'react';
 import {
-  StyleSheet,
-  FlatList,
   ActivityIndicator,
+  FlatList,
+  Image,
   Pressable,
-  View,
-  Text,
   SafeAreaView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  View
 } from 'react-native';
-import { api } from '../../../lib/api';
-import { router, useLocalSearchParams, Stack } from 'expo-router';
 import { Colors, Fonts } from '../../../constants/cognify-theme';
-import { FontAwesome } from '@expo/vector-icons';
-import type { Module, Subject, PaginatedResponse } from '../../../lib/types';
 
-// Helper to get Bloom level color
-const getBloomColor = (level?: string): string => {
-  const colors: Record<string, string> = {
-    remembering: '#4CAF50',
-    understanding: '#2196F3',
-    applying: '#FF9800',
-    analyzing: '#9C27B0',
-    evaluating: '#F44336',
-    creating: '#E91E63',
-  };
-  return colors[level?.toLowerCase() || ''] || Colors.textLight;
-};
+// --- GLOBAL STORAGE HACK FOR DEMO ---
+if (!(global as any).MODULE_PROGRESS) {
+  (global as any).MODULE_PROGRESS = {};
+}
+
+// --- MOCK DATA ---
+const INITIAL_MOCK_MODULES = [
+  {
+    id: '1',
+    title: 'Introduction to Industrial and Organizational Psychology',
+    author: 'Ronald E. Riggo',
+    progress: 0,
+    quizTaken: false,
+    imageIndex: 0
+  },
+  {
+    id: '2',
+    title: 'Organizational Theory, Design, and Change. Seventh Edition',
+    author: 'Gareth R. Jones',
+    progress: 0,
+    quizTaken: false,
+    imageIndex: 1
+  },
+  {
+    id: '3',
+    title: 'Industrial Organizational Psychology. Understanding the Workspace',
+    author: 'Paul E. Levy',
+    progress: 0,
+    quizTaken: false,
+    imageIndex: 2
+  },
+  {
+    id: '4',
+    title: 'A Scientist Practitioner Approach. Organizational Psychology',
+    author: 'Ronald E. Riggo',
+    progress: 0,
+    quizTaken: false,
+    imageIndex: 3
+  },
+];
 
 export default function SubjectModulesScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const [modules, setModules] = useState<Module[]>([]);
-  const [subject, setSubject] = useState<Subject | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [modules, setModules] = useState(INITIAL_MOCK_MODULES);
+  const [loading, setLoading] = useState(false);
+  const navigation = useNavigation();
 
-  useEffect(() => {
-    if (!id) return;
-    fetchData();
-  }, [id]);
+  // --- HIDE BOTTOM TABS ---
+  useLayoutEffect(() => {
+    navigation.getParent()?.setOptions({
+      tabBarStyle: { display: 'none' },
+    });
+    return () => {
+      navigation.getParent()?.setOptions({
+        tabBarStyle: undefined,
+      });
+    };
+  }, [navigation]);
 
-  const fetchData = async () => {
-    try {
-      // --- FIX: Use the new, efficient backend endpoint ---
-      const [subjectRes, modulesRes] = await Promise.all([
-        api.get<Subject>(`/subjects/${id}`),
-        api.get<PaginatedResponse<Module>>(`/modules/by_subject/${id}`, { 
-          params: { limit: 100 } 
-        }),
-      ]);
+  // --- SYNC PROGRESS ON FOCUS ---
+  useFocusEffect(
+    useCallback(() => {
+      const storedProgress = (global as any).MODULE_PROGRESS;
 
-      setSubject(subjectRes.data);
-      setModules(modulesRes.data.items || []); // No client-side filtering needed!
-      // --- END FIX ---
+      const updatedModules = INITIAL_MOCK_MODULES.map(m => {
+        const savedProgress = storedProgress[m.id] !== undefined
+          ? storedProgress[m.id]
+          : m.progress;
 
-    } catch (error: any) {
-      console.error('Failed to fetch data:', error.response?.data || error.message);
-    } finally {
-      setLoading(false);
-    }
+        return {
+          ...m,
+          progress: savedProgress,
+        };
+      });
+
+      setModules(updatedModules);
+    }, [])
+  );
+
+  // Custom Header Component
+  const renderHeader = () => (
+    <View style={styles.headerContainer}>
+      <Pressable
+        style={styles.backButton}
+        // --- YOUR REQUESTED ROUTING ---
+        onPress={() => {
+          router.navigate('/(app)/screens/subjects');
+        }}
+      >
+        <Ionicons name="chevron-back" size={24} color="#FFF" />
+      </Pressable>
+
+      <View style={styles.headerTitleContainer}>
+        <Text style={styles.headerTitle}>I/O Psychology</Text>
+        <Text style={styles.headerSubtitle}>Materials</Text>
+      </View>
+
+      <View style={{ width: 40 }} />
+    </View>
+  );
+
+  const renderModuleItem = ({ item, index }: { item: typeof modules[0]; index: number }) => {
+    const isCompleted = item.progress >= 100 && item.quizTaken;
+
+    // Show "Quiz Pending" if reading is capped at 90% but quiz not taken
+    const showQuizPending = !item.quizTaken && item.progress >= 90;
+
+    const coverUrls = [
+      "https://covers.openlibrary.org/b/id/8235112-M.jpg",
+      "https://covers.openlibrary.org/b/id/12547189-M.jpg",
+      "https://covers.openlibrary.org/b/id/10603687-M.jpg",
+      "https://covers.openlibrary.org/b/id/8259445-M.jpg"
+    ];
+
+    return (
+      <Pressable
+        style={styles.card}
+        onPress={() => router.push({
+          pathname: '/(app)/module/[id]',
+          params: {
+            id: item.id,
+            title: item.title,
+            author: item.author,
+            coverUrl: coverUrls[index % 4],
+          }
+        })}
+      >
+        <View style={styles.checkboxContainer}>
+          <View style={[styles.checkbox, isCompleted && styles.checkboxChecked]}>
+            {isCompleted && <FontAwesome name="check" size={12} color="white" />}
+          </View>
+        </View>
+
+        <Image
+          source={{ uri: coverUrls[index % 4] }}
+          style={styles.bookCover}
+          resizeMode="cover"
+        />
+
+        <View style={styles.contentContainer}>
+          <View>
+            <Text style={styles.cardTitle} numberOfLines={3}>
+              {item.title}
+            </Text>
+
+            <Text style={styles.cardAuthor} numberOfLines={1}>
+              {item.author}
+            </Text>
+          </View>
+
+          <View style={styles.progressWrapper}>
+            <View style={styles.progressBarTrack}>
+              <View
+                style={[
+                  styles.progressBarFill,
+                  { width: `${item.progress}%` }
+                ]}
+              />
+            </View>
+            {showQuizPending && (
+              <Text style={styles.quizPendingText}>Quiz Pending</Text>
+            )}
+          </View>
+        </View>
+      </Pressable>
+    );
   };
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.container}>
-        <Stack.Screen options={{ title: 'Loading...' }} />
-        <View style={styles.centered}>
-          <ActivityIndicator size="large" color={Colors.primary} />
-        </View>
+      <SafeAreaView style={styles.loadingContainer}>
+        <Stack.Screen options={{ headerShown: false }} />
+        <ActivityIndicator size="large" color={Colors.primary} />
       </SafeAreaView>
     );
   }
 
   return (
     <SafeAreaView style={styles.container}>
-      <Stack.Screen
-        options={{
-          title: subject?.subject_name || 'Subject',
-          headerStyle: { backgroundColor: Colors.white },
-          headerTintColor: Colors.text,
-          headerTitleStyle: { fontFamily: Fonts.semiBold },
-        }}
-      />
+      <StatusBar barStyle="dark-content" />
+      <Stack.Screen options={{ headerShown: false }} />
+
+      {renderHeader()}
 
       <FlatList
         data={modules}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.listContainer}
-        renderItem={({ item }) => (
-          <Pressable
-            style={styles.card}
-            onPress={() => router.push(`/(app)/module/${item.id}`)}>
-            <View style={styles.cardHeader}>
-              <View
-                style={[
-                  styles.bloomBadge,
-                  { backgroundColor: getBloomColor(item.bloom_level) + '20' },
-                ]}>
-                <Text
-                  style={[
-                    styles.bloomText,
-                    { color: getBloomColor(item.bloom_level) },
-                  ]}>
-                  {item.bloom_level?.toUpperCase() || 'N/A'}
-                </Text>
-              </View>
-              {item.estimated_time && (
-                <View style={styles.timeContainer}>
-                  <FontAwesome name="clock-o" size={12} color={Colors.textLight} />
-                  <Text style={styles.timeText}>{item.estimated_time} min</Text>
-                </View>
-              )}
-            </View>
-
-            <Text style={styles.cardTitle}>{item.title}</Text>
-            
-            {item.purpose && (
-              <Text style={styles.cardPurpose} numberOfLines={2}>
-                {item.purpose}
-              </Text>
-            )}
-
-            <View style={styles.cardFooter}>
-              <View style={styles.typeContainer}>
-                <FontAwesome
-                  name={item.material_type === 'video' ? 'play-circle' : 'file-text'}
-                  size={14}
-                  color={Colors.textLight}
-                />
-                <Text style={styles.typeText}>{item.material_type || 'Reading'}</Text>
-              </View>
-              <FontAwesome name="chevron-right" size={14} color={Colors.textLight} />
-            </View>
-          </Pressable>
-        )}
-        ListEmptyComponent={
-          <View style={styles.emptyContainer}>
-            <FontAwesome name="folder-open" size={48} color={Colors.textLight} />
-            <Text style={styles.emptyText}>No modules available for this subject</Text>
-          </View>
-        }
+        renderItem={renderModuleItem}
+        showsVerticalScrollIndicator={false}
       />
     </SafeAreaView>
   );
@@ -146,91 +212,125 @@ export default function SubjectModulesScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: '#FFFFFF',
   },
-  centered: {
+  loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+  },
+  headerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 15,
+    paddingTop: 10,
+    backgroundColor: '#FFFFFF',
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#381E72',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  headerTitleContainer: {
+    alignItems: 'center',
+  },
+  headerTitle: {
+    fontFamily: Fonts.bold,
+    fontSize: 20,
+    color: '#000000',
+  },
+  headerSubtitle: {
+    fontFamily: Fonts.regular,
+    fontSize: 14,
+    color: '#888888',
+    marginTop: 2,
   },
   listContainer: {
-    padding: 16,
+    padding: 20,
+    paddingTop: 10,
   },
   card: {
-    backgroundColor: Colors.white,
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 12,
+    flexDirection: 'row',
+    backgroundColor: '#FBFCE5',
+    borderRadius: 12,
+    padding: 15,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#DBCFEA',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
   },
-  cardHeader: {
-    flexDirection: 'row',
+  checkboxContainer: {
+    marginRight: 12,
+    justifyContent: 'flex-start',
+    paddingTop: 4,
+  },
+  checkbox: {
+    width: 24,
+    height: 24,
+    borderWidth: 2,
+    borderColor: '#5A5A5A',
+    borderRadius: 4,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  checkboxChecked: {
+    backgroundColor: '#B71C1C',
+    borderColor: '#B71C1C',
+  },
+  bookCover: {
+    width: 70,
+    height: 100,
+    borderRadius: 2,
+    marginRight: 15,
+    backgroundColor: '#ddd',
+  },
+  contentContainer: {
+    flex: 1,
     justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  bloomBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 8,
-  },
-  bloomText: {
-    fontFamily: Fonts.semiBold,
-    fontSize: 11,
-  },
-  timeContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  timeText: {
-    fontFamily: Fonts.regular,
-    fontSize: 12,
-    color: Colors.textLight,
-    marginLeft: 4,
+    paddingVertical: 2,
   },
   cardTitle: {
     fontFamily: Fonts.semiBold,
-    fontSize: 16,
-    color: Colors.text,
-    marginBottom: 6,
-  },
-  cardPurpose: {
-    fontFamily: Fonts.regular,
-    fontSize: 13,
-    color: Colors.textLight,
+    fontSize: 14,
+    color: '#000',
     lineHeight: 18,
-    marginBottom: 12,
+    marginBottom: 4,
   },
-  cardFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  typeContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  typeText: {
+  cardAuthor: {
     fontFamily: Fonts.regular,
     fontSize: 12,
-    color: Colors.textLight,
-    marginLeft: 6,
-    textTransform: 'capitalize',
+    color: '#757575',
   },
-  emptyContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 48,
+  progressWrapper: {
+    marginTop: 10,
+    justifyContent: 'flex-end',
   },
-  emptyText: {
-    fontFamily: Fonts.regular,
-    fontSize: 16,
-    color: Colors.textLight,
-    marginTop: 16,
-    textAlign: 'center',
+  progressBarTrack: {
+    height: 6,
+    backgroundColor: '#E0E0E0',
+    borderRadius: 3,
+    width: '100%',
   },
+  progressBarFill: {
+    height: '100%',
+    backgroundColor: '#D88C85',
+    borderRadius: 3,
+  },
+  quizPendingText: {
+    fontSize: 10,
+    color: '#B71C1C',
+    fontFamily: Fonts.bold,
+    marginTop: 4,
+    textAlign: 'right',
+  }
 });

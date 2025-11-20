@@ -1,352 +1,342 @@
-import { useEffect, useState } from 'react';
+import { Feather, Ionicons } from '@expo/vector-icons';
+import { router, Stack, useLocalSearchParams, useNavigation } from 'expo-router';
+import React, { useLayoutEffect, useRef, useState } from 'react';
 import {
-  StyleSheet,
-  ScrollView,
-  ActivityIndicator,
-  View,
-  Text,
+  Dimensions,
+  Image,
+  NativeScrollEvent,
+  NativeSyntheticEvent,
   Pressable,
-  Linking,
+  SafeAreaView,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  View
 } from 'react-native';
-import { api } from '../../../lib/api';
-import { Stack, useLocalSearchParams, router } from 'expo-router';
-import { Colors, Fonts } from '../../../constants/cognify-theme';
-import { FontAwesome } from '@expo/vector-icons';
-import type {
-  Module,
-  GeneratedSummary,
-  GeneratedQuiz,
-  GeneratedFlashcards,
-  PaginatedResponse,
-} from '../../../lib/types';
+import { Fonts } from '../../../constants/cognify-theme';
 
-export default function ModuleDetailScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
-  const [module, setModule] = useState<Module | null>(null);
-  const [summary, setSummary] = useState<GeneratedSummary | null>(null);
-  const [quiz, setQuiz] = useState<GeneratedQuiz | null>(null);
-  const [flashcards, setFlashcards] = useState<GeneratedFlashcards | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [startingActivity, setStartingActivity] = useState(false);
+const { width } = Dimensions.get('window');
 
-  useEffect(() => {
-    if (!id) return;
-    fetchData();
-  }, [id]);
+export default function ModuleReadingScreen() {
+  const { id, title, author, coverUrl } = useLocalSearchParams<{ id: string, title: string, author: string, coverUrl: string }>();
+  const navigation = useNavigation();
 
-  const fetchData = async () => {
-    try {
-      const [moduleRes, summaryRes, quizRes, flashcardsRes] = await Promise.all([
-        api.get<Module>(`/modules/${id}`),
-        api.get<PaginatedResponse<GeneratedSummary>>(
-          `/generate/generated_summaries/for_module/${id}`
-        ),
-        api.get<PaginatedResponse<GeneratedQuiz>>(
-          `/generate/generated_quizzes/for_module/${id}`
-        ),
-        api.get<PaginatedResponse<GeneratedFlashcards>>(
-          `/generate/generated_flashcards/for_module/${id}`
-        ),
-      ]);
+  // --- THEME STATE ---
+  const [isDarkMode, setIsDarkMode] = useState(false);
 
-      setModule(moduleRes.data);
-      setSummary(summaryRes.data.items[0] || null);
-      setQuiz(quizRes.data.items[0] || null);
-      setFlashcards(flashcardsRes.data.items[0] || null);
-    } catch (error: any) {
-      console.error('Failed to fetch module data:', error.response?.data || error.message);
-    } finally {
-      setLoading(false);
+  // Initialize progress from global store
+  const initialProgress = (global as any).MODULE_PROGRESS?.[id]
+    ? (global as any).MODULE_PROGRESS[id] / 100
+    : 0;
+
+  const [readingProgress, setReadingProgress] = useState(initialProgress);
+  const maxProgressRef = useRef(initialProgress);
+
+  // --- HIDE BOTTOM TABS ---
+  useLayoutEffect(() => {
+    navigation.getParent()?.setOptions({
+      tabBarStyle: { display: 'none' },
+    });
+    return () => {
+      navigation.getParent()?.setOptions({
+        tabBarStyle: undefined,
+      });
+    };
+  }, [navigation]);
+
+  // --- SCROLL HANDLER ---
+  const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const { layoutMeasurement, contentOffset, contentSize } = event.nativeEvent;
+
+    const visibleHeight = layoutMeasurement.height;
+    const contentHeight = contentSize.height;
+    const scrollY = contentOffset.y;
+
+    const scrollableHeight = contentHeight - visibleHeight;
+
+    if (scrollableHeight > 0) {
+      const currentRawProgress = scrollY / scrollableHeight;
+
+      // Cap at 90%
+      const cappedProgress = Math.min(currentRawProgress, 0.90);
+
+      // Monotonic Check (Don't go backwards)
+      if (cappedProgress > maxProgressRef.current) {
+        maxProgressRef.current = cappedProgress;
+        setReadingProgress(cappedProgress);
+
+        // Save to Global Store for the list view
+        if (!(global as any).MODULE_PROGRESS) (global as any).MODULE_PROGRESS = {};
+        (global as any).MODULE_PROGRESS[id] = cappedProgress * 100;
+      }
     }
   };
 
-  const openMaterial = async () => {
-    if (!module?.material_url) return;
-    
-    const supported = await Linking.canOpenURL(module.material_url);
-    if (supported) {
-      await Linking.openURL(module.material_url);
-    } else {
-      alert("Can't open this URL: " + module.material_url);
-    }
+  // --- THEME HELPERS ---
+  const toggleTheme = () => setIsDarkMode(!isDarkMode);
+
+  // Dynamic Colors based on state
+  const themeColors = {
+    background: isDarkMode ? '#121212' : '#F8F9FA',
+    textPrimary: isDarkMode ? '#FFFFFF' : '#000000',
+    textSecondary: isDarkMode ? '#B0B0B0' : '#666666',
+    textBody: isDarkMode ? '#E0E0E0' : '#2D2D2D',
+    quizBg: isDarkMode ? '#1E1E1E' : '#F3EEF6',
+    quizBorder: isDarkMode ? '#333333' : '#E0E0E0',
+    footerBg: isDarkMode ? '#1E1E1E' : '#FFFFFF',
+    footerBorder: isDarkMode ? '#333333' : '#F0F0F0',
   };
 
-  const startQuiz = () => {
-    if (!quiz) {
-      alert('No quiz available for this module yet.');
-      return;
-    }
-    router.push(`/(app)/quiz?quizId=${quiz.id}&moduleId=${id}` as any);
-  };
+  const contentText = `Lorem ipsum dolor sit amet, consectetur adipiscing elit. Quisque ac accumsan metus. Praesent id magna iaculis, sodales massa non, congue lacus. Curabitur a consequat nisi. Nulla tortor eros, condimentum ac libero et, cursus dapibus lacus. Nullam lacinia, leo ac mattis porttitor, dolor urna lacinia nisl, ullamcorper aliquam odio dolor sit amet turpis. Vestibulum a orci ut metus vehicula fermentum.
 
-  const viewFlashcards = () => {
-    if (!flashcards) {
-      alert('No flashcards available for this module yet.');
-      return;
-    }
-    router.push(`/(app)/flashcards?flashcardsId=${flashcards.id}` as any);
-  };
+Duis tempus gravida metus blandit bibendum. Duis commodo sapien ut gravida volutpat. Phasellus non viverra ante. Curabitur et enim sem. Quisque vulputate hendrerit massa, non iaculis nisi tincidunt id. Sed aliquet, sapien eget suscipit tempus, sem orci convallis nibh, at pharetra leo dui et elit.
 
-  if (loading) {
-    return (
-      <View style={styles.container}>
-        <Stack.Screen options={{ title: 'Loading...' }} />
-        <View style={styles.centered}>
-          <ActivityIndicator size="large" color={Colors.primary} />
-        </View>
-      </View>
-    );
-  }
+Sed auctor imperdiet tellus sit amet mollis. Sed ipsum purus, elementum a leo vel, feugiat lacinia ex. Aliquam at condimentum augue. Class aptent taciti sociosqu ad litora torquent per conubia nostra, per inceptos himenaeos. Suspendisse pulvinar rutrum leo, eu condimentum massa facilisis et. In at tortor id mauris blandit tempor sit amet neque.
+
+Vivamus eget felis sodales, dictum finibus urna. Vivamus eget felis sodales, dictum finibus urna.
+
+Suspendisse pulvinar rutrum leo, eu condimentum massa facilisis et. In at tortor id mauris blandit tempor sit amet neque. Vivamus eget felis sodales, dictum finibus urna. Vivamus eget felis sodales, dictum finibus urna.`;
 
   return (
-    <ScrollView style={styles.container}>
-      <Stack.Screen
-        options={{
-          title: module?.title || 'Module',
-          headerStyle: { backgroundColor: Colors.white },
-          headerTintColor: Colors.text,
-          headerTitleStyle: { fontFamily: Fonts.semiBold },
-        }}
-      />
+    <SafeAreaView style={[styles.container, { backgroundColor: themeColors.background }]}>
+      <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} />
+      <Stack.Screen options={{ headerShown: false }} />
 
-      <View style={styles.content}>
-        {/* Module Info Card */}
-        <View style={styles.card}>
-          <Text style={styles.moduleTitle}>{module?.title}</Text>
-          {module?.purpose && (
-            <Text style={styles.modulePurpose}>{module.purpose}</Text>
-          )}
+      {/* Header */}
+      <View style={styles.header}>
+        <Pressable
+          style={styles.backButton}
+          onPress={() => {
+            router.navigate('/(app)/subject/[id]');
+          }}
+        >
+          <Ionicons name="chevron-back" size={24} color="#FFF" />
+        </Pressable>
 
-          <View style={styles.metaContainer}>
-            {module?.bloom_level && (
-              <View style={styles.metaItem}>
-                <FontAwesome name="star" size={14} color={Colors.primary} />
-                <Text style={styles.metaText}>{module.bloom_level}</Text>
-              </View>
-            )}
-            {module?.estimated_time && (
-              <View style={styles.metaItem}>
-                <FontAwesome name="clock-o" size={14} color={Colors.primary} />
-                <Text style={styles.metaText}>{module.estimated_time} min</Text>
-              </View>
-            )}
-          </View>
-
-          {module?.material_url && (
-            <Pressable style={styles.primaryButton} onPress={openMaterial}>
-              <FontAwesome name="external-link" size={16} color={Colors.white} />
-              <Text style={styles.primaryButtonText}>Open Study Material</Text>
-            </Pressable>
-          )}
-        </View>
-
-        {/* AI Summary Card */}
-        {summary && (
-          <View style={styles.card}>
-            <View style={styles.cardHeader}>
-              <FontAwesome name="file-text" size={16} color={Colors.primary} />
-              <Text style={styles.cardTitle}>AI Summary</Text>
-            </View>
-            {summary.tos_topic_title && (
-              <View style={styles.alignmentBadge}>
-                <Text style={styles.alignmentText}>
-                  📚 {summary.tos_topic_title} • {summary.aligned_bloom_level}
-                </Text>
-              </View>
-            )}
-            <Text style={styles.summaryText}>{summary.summary_text}</Text>
-          </View>
-        )}
-
-        {/* Action Buttons */}
-        <View style={styles.actionsCard}>
-          <Pressable
-            style={[styles.actionButton, !quiz && styles.actionButtonDisabled]}
-            onPress={startQuiz}
-            disabled={!quiz}>
-            <FontAwesome name="pencil" size={20} color={Colors.white} />
-            <Text style={styles.actionButtonText}>
-              {quiz ? 'Take Quiz' : 'No Quiz Available'}
-            </Text>
-            {quiz && <Text style={styles.actionButtonSubtext}>{quiz.questions.length} questions</Text>}
-          </Pressable>
-
-          <Pressable
-            style={[styles.actionButton, !flashcards && styles.actionButtonDisabled]}
-            onPress={viewFlashcards}
-            disabled={!flashcards}>
-            <FontAwesome name="th-large" size={20} color={Colors.white} />
-            <Text style={styles.actionButtonText}>
-              {flashcards ? 'Study Flashcards' : 'No Flashcards'}
-            </Text>
-            {flashcards && (
-              <Text style={styles.actionButtonSubtext}>
-                {flashcards.flashcards.length} cards
-              </Text>
-            )}
-          </Pressable>
-        </View>
-
-        {!summary && !quiz && !flashcards && (
-          <View style={styles.emptyCard}>
-            <FontAwesome name="info-circle" size={32} color={Colors.textLight} />
-            <Text style={styles.emptyText}>
-              AI content hasn't been generated for this module yet. Check back later!
-            </Text>
-          </View>
-        )}
+        {/* Theme Toggle Button */}
+        <Pressable style={styles.iconButton} onPress={toggleTheme}>
+          <Feather
+            name={isDarkMode ? "sun" : "moon"}
+            size={24}
+            color={themeColors.textPrimary}
+          />
+        </Pressable>
       </View>
-    </ScrollView>
+
+      {/* ScrollView */}
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        onScroll={handleScroll}
+        scrollEventThrottle={16}
+      >
+        <View style={styles.imageContainer}>
+          <Image
+            source={{ uri: (coverUrl as string) || "https://covers.openlibrary.org/b/id/8235112-L.jpg" }}
+            style={styles.bookCover}
+            resizeMode="cover"
+          />
+        </View>
+
+        <Text style={[styles.title, { color: themeColors.textPrimary }]}>
+          {title || "Introduction to Industrial and Organizational Psychology"}
+        </Text>
+        <Text style={[styles.author, { color: themeColors.textSecondary }]}>
+          {author || "Ronald E. Riggo"}
+        </Text>
+
+        <Text style={[styles.text, { color: themeColors.textBody }]}>
+          {contentText}
+        </Text>
+
+        {/* Quiz Section */}
+        <View style={[
+          styles.quizSection,
+          { backgroundColor: themeColors.quizBg, borderColor: themeColors.quizBorder }
+        ]}>
+          <Text style={[styles.quizPrompt, { color: themeColors.textBody }]}>
+            Finished reading? Test your knowledge to complete this module.
+          </Text>
+          <Pressable
+            style={styles.quizButton}
+            onPress={() => {
+              alert("Navigating to Quiz...");
+            }}
+          >
+            <Text style={styles.quizButtonText}>Take Quiz</Text>
+            <Ionicons name="arrow-forward" size={20} color="#FFF" />
+          </Pressable>
+        </View>
+
+        {/* Extra spacer */}
+        <View style={{ height: 120 }} />
+      </ScrollView>
+
+      {/* Floating Progress Footer */}
+      <View style={[
+        styles.footer,
+        { backgroundColor: themeColors.footerBg, borderTopColor: themeColors.footerBorder }
+      ]}>
+        <View style={styles.progressInfo}>
+          <Text style={[styles.progressText, { color: isDarkMode ? '#A38FDB' : '#381E72' }]}>
+            {readingProgress >= 0.9
+              ? "90% (Quiz Pending)"
+              : `${Math.round(readingProgress * 100)}% Read`}
+          </Text>
+        </View>
+        <View style={[styles.progressBarTrack, { backgroundColor: isDarkMode ? '#333' : '#F0F0F0' }]}>
+          <View
+            style={[
+              styles.progressBarFill,
+              { width: `${readingProgress * 100}%`, backgroundColor: isDarkMode ? '#A38FDB' : '#381E72' }
+            ]}
+          />
+        </View>
+      </View>
+
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
+    // Background handled dynamically
   },
-  centered: {
-    flex: 1,
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#381E72',
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  content: {
-    padding: 16,
-  },
-  card: {
-    backgroundColor: Colors.white,
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
+    elevation: 4,
   },
-  moduleTitle: {
+  iconButton: {
+    padding: 8,
+  },
+  scrollContent: {
+    paddingHorizontal: 24,
+    paddingBottom: 20,
+  },
+  imageContainer: {
+    alignItems: 'center',
+    marginVertical: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    elevation: 8,
+  },
+  bookCover: {
+    width: width * 0.45,
+    height: width * 0.45 * 1.4,
+    borderRadius: 8,
+  },
+  title: {
     fontFamily: Fonts.bold,
-    fontSize: 22,
-    color: Colors.text,
+    fontSize: 20,
+    textAlign: 'center',
+    marginBottom: 8,
+    lineHeight: 26,
+  },
+  author: {
+    fontFamily: Fonts.regular,
+    fontSize: 15,
+    textAlign: 'center',
+    marginBottom: 30,
+  },
+  text: {
+    fontFamily: Fonts.regular,
+    fontSize: 17,
+    lineHeight: 30,
+    textAlign: 'justify',
+  },
+  // --- Quiz Section ---
+  quizSection: {
+    marginTop: 40,
+    alignItems: 'center',
+    padding: 24,
+    borderRadius: 16,
+    borderWidth: 1,
+    // Colors handled dynamically
+  },
+  quizPrompt: {
+    fontFamily: Fonts.regular,
+    fontSize: 15,
+    textAlign: 'center',
+    marginBottom: 16,
+    lineHeight: 22,
+  },
+  quizButton: {
+    backgroundColor: '#381E72',
+    paddingVertical: 14,
+    paddingHorizontal: 32,
+    borderRadius: 30,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    shadowColor: '#381E72',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  quizButtonText: {
+    color: '#FFF',
+    fontFamily: Fonts.bold,
+    fontSize: 16,
+  },
+
+  // --- Footer ---
+  footer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    paddingHorizontal: 24,
+    paddingTop: 16,
+    paddingBottom: 30, // Safe area padding
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 10,
+    borderTopWidth: 1,
+  },
+  progressInfo: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
     marginBottom: 8,
   },
-  modulePurpose: {
-    fontFamily: Fonts.regular,
-    fontSize: 15,
-    color: Colors.textLight,
-    lineHeight: 22,
-    marginBottom: 16,
-  },
-  metaContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginBottom: 16,
-    gap: 12,
-  },
-  metaItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  metaText: {
+  progressText: {
     fontFamily: Fonts.semiBold,
-    fontSize: 13,
-    color: Colors.text,
-    marginLeft: 6,
-    textTransform: 'capitalize',
-  },
-  primaryButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: Colors.primary,
-    borderRadius: 12,
-    paddingVertical: 14,
-    gap: 8,
-  },
-  primaryButtonText: {
-    fontFamily: Fonts.semiBold,
-    fontSize: 15,
-    color: Colors.white,
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  cardTitle: {
-    fontFamily: Fonts.semiBold,
-    fontSize: 16,
-    color: Colors.text,
-    marginLeft: 8,
-  },
-  alignmentBadge: {
-    backgroundColor: Colors.background,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-    alignSelf: 'flex-start',
-    marginBottom: 12,
-  },
-  alignmentText: {
-    fontFamily: Fonts.regular,
     fontSize: 12,
-    color: Colors.text,
+    // Color handled dynamically
   },
-  summaryText: {
-    fontFamily: Fonts.regular,
-    fontSize: 15,
-    color: Colors.text,
-    lineHeight: 24,
+  progressBarTrack: {
+    height: 6,
+    borderRadius: 3,
+    overflow: 'hidden',
+    // Background handled dynamically
   },
-  actionsCard: {
-    flexDirection: 'row',
-    gap: 12,
-    marginBottom: 16,
-  },
-  actionButton: {
-    flex: 1,
-    backgroundColor: Colors.primary,
-    borderRadius: 16,
-    padding: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 120,
-  },
-  actionButtonDisabled: {
-    backgroundColor: Colors.textLight,
-    opacity: 0.5,
-  },
-  actionButtonText: {
-    fontFamily: Fonts.semiBold,
-    fontSize: 15,
-    color: Colors.white,
-    marginTop: 8,
-    textAlign: 'center',
-  },
-  actionButtonSubtext: {
-    fontFamily: Fonts.regular,
-    fontSize: 12,
-    color: Colors.white,
-    marginTop: 4,
-    opacity: 0.8,
-  },
-  emptyCard: {
-    backgroundColor: Colors.white,
-    borderRadius: 16,
-    padding: 32,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  emptyText: {
-    fontFamily: Fonts.regular,
-    fontSize: 14,
-    color: Colors.textLight,
-    textAlign: 'center',
-    marginTop: 16,
-    lineHeight: 20,
+  progressBarFill: {
+    height: '100%',
+    borderRadius: 3,
+    // Background handled dynamically
   },
 });
