@@ -19,8 +19,15 @@ export interface User {
 export interface Subject {
   subject_id: string;
   subject_name: string;
+  description?: string; // Added this from backend model
   pqf_level?: number;
   active_tos_id?: string;
+  
+  // Backend visual fields
+  icon_name?: string;
+  icon_color?: string;
+  icon_bg_color?: string;
+  card_bg_color?: string;
 }
 
 export interface BloomEntry {

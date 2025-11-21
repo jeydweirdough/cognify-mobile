@@ -5,7 +5,7 @@ import { storage } from './storage';
 // Local development: Use your computer's IP address (not localhost)
 // Find your IP: Windows (ipconfig), Mac/Linux (ifconfig)
 // --- ⚠️ CRITICAL FIX: Change this URL ---
-const API_URL = 'https://cognify-backend.vercel.app';
+const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://cognify-backend.vercel.app';
 
 
 const TOKEN_KEY = 'cognify_token';
