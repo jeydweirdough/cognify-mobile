@@ -57,7 +57,7 @@ export default function AppLayout() {
         }}
       />
 
-      {/* 2. Learning Tab */}
+      {/* 2. Materials Tab */}
       <Tabs.Screen
         name="screens/subjects/index"
         options={{
@@ -65,7 +65,7 @@ export default function AppLayout() {
           tabBarIcon: ({ color }) => <Icon name="book" color={color} />,
         }}
       />
-
+  
       {/* 3. Progress Tab */}
       <Tabs.Screen
         name="screens/progress/index"

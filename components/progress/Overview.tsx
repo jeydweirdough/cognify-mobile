@@ -3,46 +3,40 @@ import React from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import Svg, { Circle } from "react-native-svg";
 
-// Define local constants based on the existing file (ProgressScreen.tsx)
 const Colors = {
     text: "#333333",
-    primary: "#6A2A94", // Main text color for the component
-    background: "#F8F8F8", // Card background for contrast
+    primary: "#6A2A94",
+    background: "#F8F8F8", 
 };
 
 const Fonts = {
-    semiBold: "LexendDeca-Medium",
+    regular: "LexendDeca-Regular",
 };
 
-// --- DATA STRUCTURE & TYPES ---
 
-// Status tag definitions for consistent coloring
 const STATUS_TAGS = {
-    Strong: { text: "Strong", bgColor: "#D5F5E3", textColor: "#27AE60" }, // Greenish
-    Weak: { text: "Weak", bgColor: "#FADBD8", textColor: "#E74C3C" }, // Pinkish/Reddish
-    "Needs Improvement": { text: "Needs Improvement", bgColor: "#FCF3CF", textColor: "#F1C40F" }, // Yellowish
-    Developing: { text: "Developing", bgColor: "#D4E6F1", textColor: "#3498DB" }, // Bluish
-    // Add any other statuses here
-} as const; // 'as const' makes the keys literal strings
+    Strong: { text: "Strong", bgColor: "#D5F5E3", textColor: "#27AE60" }, 
+    Weak: { text: "Weak", bgColor: "#FADBD8", textColor: "#E74C3C" }, 
+    "Needs Improvement": { text: "Needs Improvement", bgColor: "#FCF3CF", textColor: "#F1C40F" }, 
+    Developing: { text: "Developing", bgColor: "#D4E6F1", textColor: "#3498DB" },
+} as const; 
 
 type StatusKey = keyof typeof STATUS_TAGS;
 
 interface SubjectData {
     id: string;
     title: string;
-    percentage: number; // 0 to 100
+    percentage: number; 
     status: StatusKey;
-    color: string; // Color for the progress circle
+    color: string; 
 }
 
 const MOCK_SUBJECT_DATA: SubjectData[] = [
-    { id: 'p1', title: "Psychological Assessment", percentage: 92, status: "Strong", color: "#34D399" }, // Aqua/Teal color
-    { id: 'p2', title: "Development Psychology", percentage: 38, status: "Weak", color: "#F97316" }, // Orange color
-    { id: 'p3', title: "Abnormal Psychology", percentage: 55, status: "Needs Improvement", color: "#EC4899" }, // Pink color
-    { id: 'p4', title: "Development Psychology", percentage: 68, status: "Developing", color: "#F97316" }, // Orange color (reused)
+    { id: 'p1', title: "Psychological Assessment", percentage: 92, status: "Strong", color: "#34D399" }, 
+    { id: 'p2', title: "Development Psychology", percentage: 38, status: "Weak", color: "#F97316" },
+    { id: 'p3', title: "Abnormal Psychology", percentage: 55, status: "Needs Improvement", color: "#EC4899" }, 
+    { id: 'p4', title: "Development Psychology", percentage: 68, status: "Developing", color: "#F97316" }, 
 ];
-
-// --- PROGRESS CIRCLE COMPONENT ---
 
 interface CircularProgressProps {
     percentage: number;
@@ -58,9 +52,8 @@ const CircularProgress: React.FC<CircularProgressProps> = ({ percentage, color, 
     return (
         <View style={{ width: radius * 2, height: radius * 2, marginRight: 15 }}>
             <Svg height={radius * 2} width={radius * 2} viewBox={`0 0 ${radius * 2} ${radius * 2}`}>
-                {/* Background circle */}
                 <Circle
-                    stroke="#E5E7EB" // Light gray background
+                    stroke="#E5E7EB" 
                     fill="none"
                     cx={radius}
                     cy={radius}
@@ -85,7 +78,6 @@ const CircularProgress: React.FC<CircularProgressProps> = ({ percentage, color, 
             <View style={overviewStyles.progressTextContainer}>
                 <Text style={[overviewStyles.progressText, { color: Colors.text }]}>
                     {percentage}
-                    {/* Only show % if it's not a round number like 55 (p3) */}
                     {percentage !== 55 ? "%" : ""} 
                 </Text>
             </View>
@@ -103,13 +95,10 @@ const SubjectItem: React.FC<SubjectItemProps> = ({ data }) => {
     const statusData = STATUS_TAGS[data.status];
 
     return (
-        // Using TouchableOpacity to suggest navigability
         <TouchableOpacity style={overviewStyles.itemContainer}>
             
-            {/* 1. Circular Progress Indicator */}
             <CircularProgress percentage={data.percentage} color={data.color} />
 
-            {/* 2. Text and Status Tag */}
             <View style={overviewStyles.textColumn}>
                 <Text style={overviewStyles.subjectTitle}>{data.title}</Text>
                 <View style={[overviewStyles.tag, { backgroundColor: statusData.bgColor }]}>
@@ -119,7 +108,6 @@ const SubjectItem: React.FC<SubjectItemProps> = ({ data }) => {
                 </View>
             </View>
 
-            {/* 3. Arrow Icon */}
             <Feather name="chevron-right" size={24} color="#A0A0A0" />
         </TouchableOpacity>
     );
@@ -132,7 +120,6 @@ export const ProgressOverviewCard: React.FC = () => {
         <View style={overviewStyles.container}>
             <Text style={overviewStyles.mainTitle}>Progress Overview:</Text>
 
-            {/* Card Body */}
             <View style={overviewStyles.card}>
                 {MOCK_SUBJECT_DATA.map((subject, index) => (
                     <SubjectItem 
@@ -152,7 +139,7 @@ const overviewStyles = StyleSheet.create({
         marginBottom: 30,
     },
     mainTitle: {
-        fontFamily: Fonts.semiBold,
+        fontFamily: Fonts.regular,
         fontSize: 18,
         color: Colors.text,
         marginBottom: 10,
@@ -178,7 +165,7 @@ const overviewStyles = StyleSheet.create({
         marginRight: 10,
     },
     subjectTitle: {
-        fontFamily: Fonts.semiBold,
+        fontFamily: Fonts.regular,
         fontSize: 16,
         color: Colors.text,
     },
@@ -191,7 +178,7 @@ const overviewStyles = StyleSheet.create({
     },
     tagText: {
         fontSize: 12,
-        fontFamily: Fonts.semiBold,
+        fontFamily: Fonts.regular,
     },
     progressTextContainer: {
         position: 'absolute',
@@ -204,7 +191,7 @@ const overviewStyles = StyleSheet.create({
     },
     progressText: {
         fontSize: 12,
-        fontFamily: Fonts.semiBold,
+        fontFamily: Fonts.regular,
         // The color is set dynamically based on Colors.text
     }
 });

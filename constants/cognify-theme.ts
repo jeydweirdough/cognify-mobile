@@ -8,16 +8,29 @@ export const Colors = {
   placeholder: '#CDCDCD',
 };
 
+// **Updated Fonts Object**
 export const Fonts = {
-  regular: 'Poppins_400Regular',
-  semiBold: 'Poppins_600SemiBold',
-  bold: 'Poppins_700Bold',
+  // Poppins
+  poppinsRegular: 'Poppins-Regular',
+  poppinsMedium: 'Poppins-Medium',
+
+  // Lexend Deca
+  lexendDecaRegular: 'LexendDeca-Regular',
+  lexendDecaMedium: 'LexendDeca-Medium',
+
+  // Dela Gothic One
+  delaGothicOneRegular: 'DelaGothicOne-Regular',
+
+  regular: 'LexendDeca-Regular',
+  medium: 'LexendDeca-Medium', 
 };
 
-// home
+
+// You can also simplify the bottom section
 export const PRIMARY_COLOR = "#3E1E68";
 export const ACCENT_COLOR = "#000000ff";
 export const BACKGROUND_COLOR = "#FFFFFF";
-export const FONT_FAMILY = "LexendDeca-Medium";
-export const FONT_FAMILY_REGULAR = "LexendDeca-Regular";
 
+// Using the new aliases/names from the Fonts object
+export const FONT_FAMILY = Fonts.lexendDecaMedium;
+export const FONT_FAMILY_REGULAR = Fonts.lexendDecaRegular;

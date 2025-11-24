@@ -10,8 +10,8 @@ import {
 const dailyPractice = [
   { day: "S", date: "15", completed: true },
   { day: "M", date: "16", completed: true },
-  { day: "T", date: "17", completed: true },
-  { day: "W", date: "18", active: true },
+  { day: "T", date: "17", active: true },
+  { day: "W", date: "18", completed: false },
   { day: "T", date: "19", completed: false },
   { day: "F", date: "20", completed: false },
   { day: "S", date: "21", completed: false },

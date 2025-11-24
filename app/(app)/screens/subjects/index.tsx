@@ -102,7 +102,7 @@ export default function LearningScreen() {
   return (
   <SafeAreaView style={{ flex: 1, backgroundColor: "#F9F9F9" }}>
 
-      <Header title="Learning" />
+      <Header title="Materials" />
 
       <ScrollView 
         contentContainerStyle={styles.scrollContent}

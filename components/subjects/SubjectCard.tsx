@@ -1,12 +1,7 @@
-import React from "react";
+import React from "react"; 
 import { View, Text, Pressable, Image, StyleSheet, Platform } from "react-native";
 import { router } from "expo-router";
-
-const Fonts = {
-  regular: "System",
-  semiBold: "System",
-  bold: "System",
-};
+import { Fonts } from '@/constants/cognify-theme'; 
 
 const images: any = {
   "1": require("@/assets/images/psych_asses.png"),
@@ -18,7 +13,6 @@ const images: any = {
 export const SubjectCard = ({ data }: any) => {
   return (
     <View style={{ marginBottom: 20 }}>
-      {/* ❗ Title outside the box (same as screenshot) */}
       <Text style={styles.subjectTitleOutside}>{data.name}</Text>
 
       <Pressable
@@ -26,7 +20,6 @@ export const SubjectCard = ({ data }: any) => {
         onPress={() => router.push(`/(app)/subject/${data.id}`)}
       >
         <View style={styles.row}>
-          {/* Icon box */}
           <View style={[styles.iconBox, { backgroundColor: data.iconBgColor }]}>
             <Image
               source={images[data.id]}
@@ -35,15 +28,12 @@ export const SubjectCard = ({ data }: any) => {
             />
           </View>
 
-          {/* Right side content */}
           <View style={styles.rightColumn}>
-            {/* Description + percentage in ONE ROW */}
             <View style={styles.descRow}>
               <Text style={styles.description}>{data.description}</Text>
               <Text style={styles.percentageText}>{data.percentage}%</Text>
             </View>
 
-            {/* Progress + percentage ends at the right */}
             <View style={styles.progressBarBackground}>
               <View
                 style={[
@@ -60,9 +50,8 @@ export const SubjectCard = ({ data }: any) => {
 };
 
 const styles = StyleSheet.create({
-  /** Title outside (above the card box) */
   subjectTitleOutside: {
-    fontFamily: Fonts.semiBold,
+    fontFamily: Fonts.lexendDecaMedium, 
     fontSize: 15,
     color: "#222",
     marginBottom: 20,
@@ -108,13 +97,11 @@ const styles = StyleSheet.create({
     height: 50,
   },
 
-  /** Right Column */
   rightColumn: {
     flex: 1,
     marginLeft: 14,
   },
 
-  /** Description and percentage */
   descRow: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -123,7 +110,7 @@ const styles = StyleSheet.create({
 
   description: {
     flex: 1,
-    fontFamily: Fonts.regular,
+    fontFamily: Fonts.lexendDecaRegular, 
     fontSize: 12.5,
     color: "#333",
     lineHeight: 18,
@@ -131,13 +118,12 @@ const styles = StyleSheet.create({
   },
 
   percentageText: {
-    fontFamily: Fonts.bold,
+    fontFamily: Fonts.lexendDecaMedium, 
     fontSize: 14,
     color: "#444",
     marginTop: 2,
   },
 
-  /** Progress Bar */
   progressBarBackground: {
     marginTop: 8,
     height: 6,
