@@ -1,11 +1,12 @@
-import React, { useEffect, useState } from "react";
-import { ActivityIndicator, ScrollView, Text, View, StyleSheet, RefreshControl } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { useFonts } from "expo-font";
 import { api } from "@/lib/api"; // Import your API client
+import { useFonts } from "expo-font";
+import React, { useEffect, useState } from "react";
+import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
-import { ReadinessCard } from "@/components/subjects/ReadinessCard";
+import MotivationCard from "@/components/subjects/Motivation-quote";
 import { SubjectCard } from "@/components/subjects/SubjectCard";
+import Header from "@/components/ui/header";
 
 const Colors = {
   background: "#F8F8F8",
@@ -99,10 +100,9 @@ export default function LearningScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Learning</Text>
-      </View>
+  <SafeAreaView style={{ flex: 1, backgroundColor: "#F9F9F9" }}>
+
+      <Header title="Learning" />
 
       <ScrollView 
         contentContainerStyle={styles.scrollContent}
@@ -110,7 +110,9 @@ export default function LearningScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
-        <ReadinessCard data={MOCK_READINESS_DATA} />
+                <MotivationCard />
+        
+        {/* <ReadinessCard data={MOCK_READINESS_DATA} /> */}
 
         {subjects.length > 0 ? (
           subjects.map((subject) => (
@@ -136,19 +138,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  header: {
-    paddingHorizontal: 20,
-    paddingVertical: 15,
-    alignItems: "center",
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderColor: "#EFEFEF",
-    backgroundColor: Colors.white,
-  },
-  headerTitle: {
-    fontFamily: Fonts.semiBold,
-    fontSize: 18,
-    color: Colors.text,
-  },
+  
   scrollContent: {
     paddingHorizontal: 20,
     paddingBottom: 30,

@@ -1,6 +1,6 @@
 import React from "react";
-import { View, Text, StyleSheet, Platform } from "react-native";
-import { CircularProgress } from "./CircularProgress";
+import { Platform, StyleSheet, Text, View } from "react-native";
+import { CircularProgress } from "../subjects/CircularProgress";
 
 const Colors = {
   white: "#FFFFFF",

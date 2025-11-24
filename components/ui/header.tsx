@@ -1,23 +1,36 @@
 import React from "react";
-import { View, Text, StyleSheet } from "react-native";
+import { View, Text, StyleSheet, SafeAreaView, StatusBar } from "react-native"; 
 
 interface HeaderProps {
   title: string;
 }
+
 const Header = ({ title }: HeaderProps) => (
-  <View style={styles.header}>
-    <Text style={styles.headerTitle}>{title}</Text>
-  </View>
+  <SafeAreaView style={styles.safeArea}>
+    
+    <StatusBar 
+        barStyle="dark-content" 
+        backgroundColor="#FFF" 
+    />
+    
+    <View style={styles.header}>
+      <Text style={styles.headerTitle}>{title}</Text>
+    </View>
+  </SafeAreaView>
 );
 
 const styles = StyleSheet.create({
+  safeArea: {
+    backgroundColor: "#F7F8FB", 
+  },
+  
   header: {
     paddingHorizontal: 20,
     paddingVertical: 15,
     alignItems: "center",
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderColor: "#EFEFEF",
-    backgroundColor: "#FFF",
+    borderBottomWidth: 0.3, 
+    borderColor: "#000000", 
+    backgroundColor: "#F7F8FB", 
   },
   headerTitle: {
     fontSize: 18,

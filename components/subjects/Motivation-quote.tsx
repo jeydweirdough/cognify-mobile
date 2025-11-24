@@ -3,7 +3,6 @@ import { View, Text, StyleSheet } from "react-native";
 
 interface MotivationCardProps {
   quote?: string;
-  // subtitle?: string;
 }
 
 export default function MotivationCard({
@@ -34,7 +33,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 5,
     elevation: 8,
-    marginBottom: 10,
+    marginBottom: 25,
   },
   headerRow: {
     flexDirection: "row",
@@ -45,7 +44,6 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 16,
-    fontWeight: "500",
     // fontStyle: "italic",
     color: "#FFF",
   },
@@ -67,8 +65,6 @@ const styles = StyleSheet.create({
   },
   quoteText: {
     fontSize: 14,
-    fontWeight: "700",
-    letterSpacing: 0.5,
     textAlign: "center",
     color: "#6A2A94", // fallback primary color
   },

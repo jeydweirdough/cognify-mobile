@@ -1,12 +1,12 @@
-import React, { useEffect, useState } from "react";
-import { ActivityIndicator, ScrollView, Text, View, StyleSheet } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { useFonts } from "expo-font";
+import React, { useEffect, useState } from "react";
+import { ActivityIndicator, ScrollView, StyleSheet, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
-import { ReadinessCard } from "@/components/subjects/ReadinessCard";
 import { AchievementsCard } from "@/components/progress/Achievements";
 import { ProgressOverviewCard } from "@/components/progress/Overview";
-import MotivationCard from "@/components/progress/Motivation-quote";
+import { ReadinessCard } from "@/components/progress/ReadinessCard";
+import Header from "@/components/ui/header";
 
 const Colors = {
   background: "#F8F8F8",
@@ -52,13 +52,13 @@ export default function ProgressScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Progress</Text>
-      </View>
+ <SafeAreaView style={{ flex: 1, backgroundColor: "#F9F9F9" }}>
+
+      <Header title="Progress" />
+
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        <MotivationCard />
+        {/* <MotivationCard /> */}
         <ReadinessCard data={MOCK_READINESS_DATA} />
         <AchievementsCard />
         <ProgressOverviewCard />
@@ -76,19 +76,6 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-  },
-  header: {
-    paddingHorizontal: 20,
-    paddingVertical: 15,
-    alignItems: "center",
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderColor: "#EFEFEF",
-    backgroundColor: Colors.white,
-  },
-  headerTitle: {
-    fontFamily: Fonts.semiBold,
-    fontSize: 18,
-    color: Colors.text,
   },
   scrollContent: {
     paddingHorizontal: 20,
