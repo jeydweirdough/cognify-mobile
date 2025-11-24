@@ -46,6 +46,48 @@ export default function LearningScreen() {
     "Poppins-Regular": require("@/assets/fonts/Poppins-Regular.ttf"),
   });
 
+// uncomment this if you want to use real backend data PERO ETO MUNA HA
+const MOCK_SUBJECTS_DATA = [
+  {
+    id: "1",
+    name: "Psychological Assessment",
+    description: "Understanding and using psychological tests to measure behavior and mental processes.",
+    percentage: 60,
+    iconColor: "#D8C713",
+    iconBgColor: "#F0F5D5",
+    cardBgColor: "#FDFFB8",
+
+  },
+  {
+    id: "2",
+    name: "Developmental Psychology",
+    description: "Study of human growth and changes from childhood to adulthood.",
+    percentage: 75,
+    iconColor: "#4C609B",
+    iconBgColor: "#E2E6F2",
+    cardBgColor: "#FFE8CD",
+  },
+  {
+    id: "3",
+    name: "Abnormal Psychology",
+    description: "Study of psychological disorders, their causes, and treatments.",
+    percentage: 90,
+    iconColor: "#30C49F",
+    iconBgColor: "#FCF5EE",
+    cardBgColor: "#FCF5EE",
+  },
+  {
+    id: "4",
+    name: "Industrial/Organizational Psychology",
+    description: "Application of psychology to workplace behavior and performance.",
+    percentage: 45,
+    iconColor: "#D38A4D",
+    iconBgColor: "#F9ECE3",
+    cardBgColor: "#F4F8D3",
+  },
+];
+
+
   const fetchSubjects = async () => {
     try {
       const response = await api.get('/subjects/');
@@ -114,7 +156,7 @@ export default function LearningScreen() {
         
         {/* <ReadinessCard data={MOCK_READINESS_DATA} /> */}
 
-        {subjects.length > 0 ? (
+        {/* {subjects.length > 0 ? (
           subjects.map((subject) => (
             <SubjectCard key={subject.id} data={subject} />
           ))
@@ -122,7 +164,10 @@ export default function LearningScreen() {
           <View style={styles.centered}>
             <Text style={{ fontFamily: Fonts.regular, marginTop: 20 }}>No subjects found.</Text>
           </View>
-        )}
+        )} */}
+            {MOCK_SUBJECTS_DATA.map((subject) => (
+          <SubjectCard key={subject.id} data={subject} />
+        ))}
       </ScrollView>
     </SafeAreaView>
   );
