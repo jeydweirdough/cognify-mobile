@@ -35,23 +35,63 @@ interface SubjectDetailData {
 }
 
 const SUBJECT_DETAILS: Record<string, SubjectDetailData> = {
-    p1: {
-        id: "p1",
-        title: "[subject_name]", // Using the placeholder from the screenshot
-        passProbability: 92,
-        learningCompleted: 7,
-        assessmentCompleted: 8,
-        bloomPerformance: {
-            remembering: 85,
-            understanding: 75,
-            applying: 65,
-            analyzing: 55,
-            evaluating: 45,
-        },
-    },
-    // Add more mock data if needed
+    p1: {
+        id: "p1",
+        title: "Psychological Assessment",
+        passProbability: 92,
+        learningCompleted: 7,
+        assessmentCompleted: 8,
+        bloomPerformance: {
+            remembering: 85,
+            understanding: 75,
+            applying: 65,
+            analyzing: 55,
+            evaluating: 45,
+        },
+    },
+    p2: {
+        id: "p2",
+        title: "Development Psychology", 
+        passProbability: 38,
+        learningCompleted: 2,
+        assessmentCompleted: 1,
+        bloomPerformance: {
+            remembering: 40,
+            understanding: 30,
+            applying: 15,
+            analyzing: 5,
+            evaluating: 0,
+        },
+    },
+    p3: {
+        id: "p3",
+        title: "Abnormal Psychology",
+        passProbability: 55,
+        learningCompleted: 4,
+        assessmentCompleted: 3,
+        bloomPerformance: {
+            remembering: 60,
+            understanding: 50,
+            applying: 35,
+            analyzing: 25,
+            evaluating: 15,
+        },
+    },
+    p4: {
+        id: "p4",
+        title: "Development Psychology",
+        passProbability: 68,
+        learningCompleted: 5,
+        assessmentCompleted: 6,
+        bloomPerformance: {
+            remembering: 70,
+            understanding: 60,
+            applying: 50,
+            analyzing: 40,
+            evaluating: 30,
+        },
+    },
 };
-
 // --- Components ---
 
 interface SemiCircleProgressProps {
