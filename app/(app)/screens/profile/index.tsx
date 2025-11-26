@@ -33,7 +33,7 @@ export default function ProfileScreen() {
           <PersonalNoteCard note={note} onEdit={() => setModalVisible(true)} />
         </View>
 
-        <View style={{ paddingHorizontal: 16, paddingBottom: 24 }}>
+        <View style={{ paddingHorizontal: 16, paddingBottom: 10 }}>
           {!isEditing && (
             <ProfileMenu onLogout={logout} navigation={navigation} />
           )}

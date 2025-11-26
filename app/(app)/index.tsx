@@ -29,14 +29,14 @@ export default function App() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: "#F9F9F9" }}>
       <View style={{ flex: 1 }}>
-        <Header title="Good Day to Learn!" subtitle="Hi, Babycakes" />
+        <Header title="Good Day to Learn!"  />
         <ScrollView style={{ flex: 1 }}>
-          <View style={{ paddingHorizontal: 20, marginTop: -10 }}>
+          <View style={{ paddingHorizontal: 20, marginTop: 0 }}>
             <DailyPractice />
             <AssessmentTest />
             <RecommendedCard />
             <ContinueReading />
-            <View style={{ height: 100 }} />
+            <View style={{ height: 30 }} />
           </View>
         </ScrollView>
       </View>

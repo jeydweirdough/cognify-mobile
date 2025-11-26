@@ -40,13 +40,13 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 5,
     elevation: 8,
-    marginBottom: 25,
+    marginBottom: 10,
   },
   headerRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
-    marginBottom: 10,
+    marginBottom: 8,
     width: "80%",
   },
   title: {

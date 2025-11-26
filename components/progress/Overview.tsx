@@ -2,6 +2,7 @@ import { Feather } from "@expo/vector-icons";
 import React from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import Svg, { Circle } from "react-native-svg";
+import { router } from "expo-router"; // Import router for navigation
 
 const Colors = {
     text: "#333333",
@@ -12,7 +13,6 @@ const Colors = {
 const Fonts = {
     regular: "LexendDeca-Regular",
 };
-
 
 const STATUS_TAGS = {
     Strong: { text: "Strong", bgColor: "#D5F5E3", textColor: "#27AE60" }, 
@@ -85,7 +85,7 @@ const CircularProgress: React.FC<CircularProgressProps> = ({ percentage, color, 
     );
 };
 
-// --- SUBJECT ITEM COMPONENT ---
+// --- SUBJECT ITEM COMPONENT (UPDATED) ---
 
 interface SubjectItemProps {
     data: SubjectData;
@@ -94,8 +94,15 @@ interface SubjectItemProps {
 const SubjectItem: React.FC<SubjectItemProps> = ({ data }) => {
     const statusData = STATUS_TAGS[data.status];
 
+ const handlePress = () => {
+    router.push({
+        pathname: "/progress/[id]", 
+        params: { id: data.id },     
+    });
+};
+
     return (
-        <TouchableOpacity style={overviewStyles.itemContainer}>
+        <TouchableOpacity style={overviewStyles.itemContainer} onPress={handlePress}>
             
             <CircularProgress percentage={data.percentage} color={data.color} />
 

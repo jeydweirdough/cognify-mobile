@@ -7,22 +7,38 @@ import {
   BACKGROUND_COLOR,
 } from "@/constants/cognify-theme";
 
-const dailyPractice = [
-  { day: "S", date: "15", completed: true },
-  { day: "M", date: "16", completed: true },
-  { day: "T", date: "17", active: true },
-  { day: "W", date: "18", completed: false },
-  { day: "T", date: "19", completed: false },
-  { day: "F", date: "20", completed: false },
-  { day: "S", date: "21", completed: false },
-];
+// Helper to get day initials
+const daysOfWeek = ["S", "M", "T", "W", "T", "F", "S"];
+
+// Generate weekly practice dynamically
+const generateWeeklyPractice = () => {
+  const today = new Date();
+  const startDate = new Date(today);
+  startDate.setDate(today.getDate() - today.getDay()); // start from Sunday
+
+  return Array.from({ length: 7 }).map((_, index) => {
+    const date = new Date(startDate);
+    date.setDate(startDate.getDate() + index);
+
+    return {
+      day: daysOfWeek[date.getDay()],
+      date: date.getDate(),
+      active: date.toDateString() === today.toDateString(),
+      completed: date < today,
+    };
+  });
+};
 
 export default function DailyPractice() {
+  const dailyPractice = generateWeeklyPractice();
+  const todayIndex = dailyPractice.findIndex((item) => item.active);
+  const dayCounter = todayIndex + 1;
+
   return (
     <View style={styles.section}>
       <View style={styles.sectionHeader}>
         <Text style={styles.sectionTitle}>Daily Practice</Text>
-        <Text style={styles.dayCounter}>Day 4</Text>
+        <Text style={styles.dayCounter}>Day {dayCounter}</Text>
       </View>
 
       <View style={styles.practiceGrid}>

@@ -117,7 +117,7 @@ const styles = StyleSheet.create({
     marginBottom: 30,
   },
   title: {
-    fontFamily: Fonts.bold,
+    fontFamily: Fonts.poppinsMedium,
     fontSize: 32,
     color: Colors.white,
     textAlign: 'center',
@@ -145,7 +145,7 @@ const styles = StyleSheet.create({
     opacity: 0.8,
   },
   buttonText: {
-    fontFamily: Fonts.semiBold,
+    fontFamily: Fonts.poppinsMedium,
     fontSize: 16,
     color: Colors.primary,
   },
@@ -161,7 +161,7 @@ const styles = StyleSheet.create({
     color: Colors.white,
   },
   createText: {
-    fontFamily: Fonts.bold,
+    fontFamily: Fonts.poppinsMedium,
     fontSize: 14,
     color: Colors.white,
     marginLeft: 5,

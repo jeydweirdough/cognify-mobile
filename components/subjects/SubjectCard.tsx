@@ -203,7 +203,7 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.lexendDecaMedium,
     fontSize: 15,
     color: "#222",
-    marginBottom: 20,
+    marginBottom: 15,
     marginLeft: 4,
   },
 

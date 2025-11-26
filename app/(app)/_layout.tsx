@@ -16,38 +16,40 @@ const Icon = ({
 
 export default function AppLayout() {
   return (
-    <Tabs
-      screenOptions={{
-        tabBarActiveTintColor: Colors.primary,
-        tabBarInactiveTintColor: "#3e4042ff",
-        tabBarShowLabel: true,
-        tabBarLabelStyle: {
-          fontSize: 11,
-          fontWeight: "600",
-          marginTop: 4,
-        },
-        headerShown: false,
-        tabBarStyle: {
-          backgroundColor: Colors.white,
-          borderTopWidth: 0,
-          paddingBottom: Platform.OS === "ios" ? 24 : 16,
-          paddingTop: 10,
-          height: Platform.OS === "ios" ? 90 : 60,
-          elevation: 0,
-          shadowColor: "#000",
-          shadowOffset: {
-            width: 0,
-            height: -4,
-          },
-          shadowOpacity: 0.08,
-          shadowRadius: 12,
-          borderTopLeftRadius: 24,
-          borderTopRightRadius: 24,
-          position: "absolute",
-          marginHorizontal: 1,
-        },
-      }}
-    >
+  <Tabs
+  screenOptions={{
+    tabBarActiveTintColor: Colors.primary,
+    tabBarInactiveTintColor: "#3e4042ff",
+    tabBarShowLabel: true,
+    tabBarLabelStyle: {
+      fontSize: 11,
+      fontWeight: "600",
+      marginTop: 4,
+    },
+    headerShown: false,
+    tabBarStyle: {
+      backgroundColor: Colors.white,
+      borderTopWidth: 0,
+      paddingBottom: Platform.OS === "ios" ? 24 : 16,
+      paddingTop: 10,
+      height: Platform.OS === "ios" ? 90 : 60,
+      elevation: 0,
+      shadowColor: "#000",
+      shadowOffset: {
+        width: 0,
+        height: -4,
+      },
+      shadowOpacity: 0.08,
+      shadowRadius: 12,
+      borderTopLeftRadius: 24,
+      borderTopRightRadius: 24,
+      // remove position absolute so it has its own space
+      // position: "absolute",
+      marginHorizontal: 1,
+    },
+  }}
+>
+
       {/* 1. Home Tab */}
       <Tabs.Screen
         name="index"
@@ -115,6 +117,14 @@ export default function AppLayout() {
         options={{
           href: null,
           tabBarStyle: { display: "none" },
+        }}
+      />
+
+        <Tabs.Screen
+        name="progress/[id]"
+        options={{
+          href: null,
+          tabBarStyle: { display: 'none' },
         }}
       />
 
