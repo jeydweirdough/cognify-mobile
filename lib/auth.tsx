@@ -1,10 +1,13 @@
+// lib/auth.tsx (Fixed)
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { storage } from './storage';
-import { Href, useRouter, useSegments } from 'expo-router'; 
-import { api, TOKEN_KEY } from './api';
-import { Alert } from 'react-native'; 
+import { Href, useRouter, useSegments } from 'expo-router';
+import { api, TOKEN_KEY, REFRESH_TOKEN_KEY } from './api';
+import { Alert } from 'react-native';
 
 export interface User {
+// ... (User interface remains the same)
+  username: string;
   id: string;
   email: string;
   first_name?: string;
@@ -18,7 +21,8 @@ interface AuthContextType {
   user: User | null;
   initialized: boolean;
   login: (email: string, pass: string) => Promise<void>;
-  signup: (email: string, pass: string) => Promise<void>;
+  // 👇 FIX 1: Update signup signature to include first and last name
+  signup: (email: string, pass: string, firstName: string, lastName: string) => Promise<void>; 
   logout: () => void;
   setUser: React.Dispatch<React.SetStateAction<User | null>>;
   updateProfile: (updates: Partial<User>) => Promise<void>;
@@ -35,10 +39,11 @@ export function useAuth() {
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
+// ... (state variables and useEffects remain the same)
   const [token, setToken] = useState<string | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [initialized, setInitialized] = useState(false);
-  
+
   const segments = useSegments();
   const router = useRouter();
 
@@ -67,12 +72,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } else if (!token && !inAuthGroup) {
       router.replace('/(auth)/login' as Href);
     }
-  }, [token, initialized, segments, router]);
+  }, [token, initialized, segments]);
 
-  const fetchUserProfile = async () => {
+ const fetchUserProfile = async () => {
     try {
-      const { data } = await api.get('/profiles/');
-      setUser(data);
+      // FIX: Changed from '/profiles/' to '/profiles/me' based on your backend
+      const { data } = await api.get('/profiles/me');
+      
+      // Transform response to match User interface
+      // Backend returns { role, data: { profile, ... } }
+      const profileData = data.data?.profile || data;
+      
+      setUser({
+        // 👇 FIX: Add 'username' property here
+        username: profileData.username || profileData.email, 
+        id: profileData.id || profileData.uid,
+        email: profileData.email,
+        first_name: profileData.first_name,
+        middle_name: profileData.middle_name,
+        last_name: profileData.last_name,
+        role_id: profileData.role_id,
+      });
     } catch (e: any) {
       console.error('Failed to fetch user profile:', e.response?.data || e.message);
       await logout();
@@ -80,39 +100,65 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const login = async (email: string, pass: string) => {
+// ... (login function is unchanged)
     try {
-      const { data } = await api.post('/auth/login', { email, password: pass });
+      const { data } = await api.post('/auth/login', { 
+        email, 
+        password: pass 
+      });
+      
+      // Store both tokens
       await storage.setItem(TOKEN_KEY, data.token);
+      await storage.setItem(REFRESH_TOKEN_KEY, data.refresh_token);
+      
       setToken(data.token);
       await fetchUserProfile();
+      
       router.replace('/(app)' as Href);
     } catch (e: any) {
       console.error('Login failed:', e.response?.data || e.message);
-      Alert.alert(`Login Failed`, e.response?.data?.detail || 'Unknown error');
-      throw e; 
+      
+      const errorMessage = e.response?.data?.detail || 'Login failed. Please try again.';
+      Alert.alert('Login Failed', errorMessage);
+      throw e;
     }
   };
 
-  const signup = async (email: string, pass: string) => {
+  // 👇 FIX 2: Update signup implementation to accept and use first and last name
+  const signup = async (email: string, pass: string, firstName: string, lastName: string) => { 
     try {
-      await api.post('/auth/signup', { email, password: pass });
-      Alert.alert('Account Created', 'Your account has been successfully created. Logging you in...');
+      await api.post('/auth/signup', {
+        email,
+        password: pass,
+        first_name: firstName, // Sent to backend
+        last_name: lastName,   // Sent to backend
+      });
+      
+      Alert.alert('Success', 'Account created! Logging you in...');
       await login(email, pass);
     } catch (e: any) {
       console.error('Signup failed:', e.response?.data || e.message);
-      if (e.response?.data?.detail.includes('Account with email')) {
-        Alert.alert(`Signup Failed`, e.response?.data?.detail || 'Unknown error');
-      }
-      throw e; 
+      
+      // The backend returns a detail of type Array(3) if fields are missing, 
+      // which is why the UI logging "Signup failed: {detail: Array(3)}"
+      const errorMessage = e.response?.data?.detail 
+        ? (Array.isArray(e.response.data.detail) 
+          ? 'Missing required fields (First Name/Last Name).' 
+          : e.response.data.detail) 
+        : 'Signup failed. Please try again.';
+
+      Alert.alert('Signup Failed', errorMessage);
+      throw e;
     }
   };
-
+// ... (rest of the file is unchanged)
   const updateProfile = async (updates: Partial<User>) => {
     try {
-      // FIXED: Switched from PATCH to PUT to resolve 405 Method Not Allowed error.
-      const { data } = await api.put('/profiles/', updates);
+      // FIX: Changed from '/profiles/' to '/profiles/me'
+      const { data } = await api.put('/profiles/me', updates);
       
-      setUser(data);
+      // Update local user state
+      setUser((prev) => prev ? { ...prev, ...updates } : null);
       Alert.alert('Success', 'Profile updated successfully');
     } catch (e: any) {
       console.error('Update failed:', e.response?.data || e.message);
@@ -128,6 +174,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.error('Logout API call failed:', e.response?.data || e.message);
     } finally {
       await storage.deleteItem(TOKEN_KEY);
+      await storage.deleteItem(REFRESH_TOKEN_KEY);
       setToken(null);
       setUser(null);
       router.replace('/(auth)/login' as Href);

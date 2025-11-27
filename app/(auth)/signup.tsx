@@ -1,3 +1,4 @@
+// app/(auth)/sign-up.tsx (Fixed)
 import { useState } from 'react';
 import {
   View,
@@ -6,8 +7,8 @@ import {
   Pressable,
   Text,
   SafeAreaView,
-  ActivityIndicator, // Import ActivityIndicator
-  Alert, // Import Alert
+  ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { useAuth } from '../../lib/auth';
 import { Link } from 'expo-router';
@@ -17,12 +18,16 @@ import { FontAwesome } from '@expo/vector-icons';
 export default function SignUpScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [isLoading, setIsLoading] = useState(false); // Add loading state
+  // 👇 FIX 1: Add state for first_name and last_name
+  const [firstName, setFirstName] = useState(''); 
+  const [lastName, setLastName] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const { signup } = useAuth();
 
   const handleSignUp = async () => {
-    if (!email || !password) {
-      Alert.alert('Missing Fields', 'Please enter both email and password.');
+    // 👇 FIX 2: Check for missing first_name and last_name
+    if (!email || !password || !firstName || !lastName) {
+      Alert.alert('Missing Fields', 'Please enter your full name, email, and password.');
       return;
     }
     
@@ -34,10 +39,10 @@ export default function SignUpScreen() {
 
     setIsLoading(true);
     try {
-      await signup(email, password);
+      // 👇 FIX 3: Pass firstName and lastName to signup
+      await signup(email, password, firstName, lastName);
       // On success, the useAuth hook will show an alert and handle navigation
     } catch (e: any) {
-      // --- FIX: Catch the error from useAuth to stop loading ---
       // The alert is already shown by lib/auth.tsx
       console.log("Signup error caught by UI");
     } finally {
@@ -52,6 +57,26 @@ export default function SignUpScreen() {
           <FontAwesome name="smile-o" size={60} color={Colors.primary} />
         </View>
         <Text style={styles.title}>Create Account</Text>
+
+        {/* 👇 FIX 4: Add Input for First Name */}
+        <TextInput
+          style={styles.input}
+          placeholder="First Name"
+          value={firstName}
+          onChangeText={setFirstName}
+          autoCapitalize="words"
+          placeholderTextColor={Colors.placeholder}
+        />
+        
+        {/* 👇 FIX 5: Add Input for Last Name */}
+        <TextInput
+          style={styles.input}
+          placeholder="Last Name"
+          value={lastName}
+          onChangeText={setLastName}
+          autoCapitalize="words"
+          placeholderTextColor={Colors.placeholder}
+        />
 
         <TextInput
           style={styles.input}
@@ -96,6 +121,10 @@ export default function SignUpScreen() {
 }
 
 const styles = StyleSheet.create({
+// ... (rest of the StyleSheet is unchanged)
+// ...
+// ...
+// ...
   safeArea: {
     flex: 1,
     backgroundColor: Colors.primary,

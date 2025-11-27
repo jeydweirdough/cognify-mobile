@@ -17,17 +17,15 @@ export interface User {
 
 // Subject & TOS Types
 export interface Subject {
-  subject_id: string;
-  subject_name: string;
-  description?: string; // Added this from backend model
-  pqf_level?: number;
-  active_tos_id?: string;
-  
-  // Backend visual fields
-  icon_name?: string;
-  icon_color?: string;
-  icon_bg_color?: string;
-  card_bg_color?: string;
+  subject_id: string;
+  title: string;
+  description?: string; // Added this from backend model
+  pqf_level?: number;
+  active_tos_id?: string;
+  
+  // Added UI property for SubjectCard
+  percentage?: number; // <--- ADD THIS
+
 }
 
 export interface BloomEntry {
