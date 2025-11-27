@@ -1,3 +1,5 @@
+// SubjectCard.tsx
+
 import React from "react";
 import {
   View,
@@ -18,6 +20,20 @@ const images: Record<string, any> = {
   "Industrial-Organizational Psychology": require("@/assets/images/io_psych.png"),
 };
 
+// Define the shape of the data passed to SubjectCard
+interface SubjectCardData {
+  id: string;
+  title: string;
+  description: string;
+  // 💡 FIX: Removed 'percentage: number;' because it is now calculated internally.
+  iconColor: string;
+  iconBgColor: string;
+  cardBgColor: string;
+  totalTopics: number; // New prop: total number of topics/modules
+  topicProgressMap: Record<string, number>; // New prop: map of topicId -> progress (%)
+  topicIds: string[]; // New prop: list of all topic IDs
+}
+
 /**
  * Static utility function to get the image source by ID.
  * This acts as the requested "static method" for image retrieval.
@@ -28,7 +44,29 @@ const getImageSource = (id: string): any => {
   return images[id];
 };
 
-export const SubjectCard = ({ data }: any) => {
+export const SubjectCard = ({ data }: { data: SubjectCardData }) => {
+  // --- NEW LOGIC FOR PROGRESS CALCULATION (UNCHANGED) ---
+  const topicIdsWithContent = data.topicIds; // Assume all fetched topic IDs are valid materials
+  const totalMaterials = topicIdsWithContent.length;
+
+  let overallPercentage = 0;
+
+  if (totalMaterials > 0) {
+    // 1. Sum up the progress of all relevant topics (those with IDs in topicIds)
+    const totalProgressSum = topicIdsWithContent.reduce((sum, topicId) => {
+      // Get the progress for this topic ID from the map
+      const progress = data.topicProgressMap[topicId] || 0;
+      return sum + progress;
+    }, 0);
+
+    // 2. Calculate the overall percentage
+    // (Total Sum of Progress) / (Total Number of Materials)
+    overallPercentage = Math.round(totalProgressSum / totalMaterials);
+  }
+
+  // Use the calculated percentage for display
+  const displayPercentage = overallPercentage;
+
   return (
     <View style={{ marginBottom: 20 }}>
       {/* Title outside the card */}
@@ -36,7 +74,12 @@ export const SubjectCard = ({ data }: any) => {
 
       <Pressable
         style={[styles.subjectCard, { backgroundColor: data.cardBgColor }]}
-        onPress={() => router.push(`/(app)/subject/${data.id}`)}
+        onPress={() =>
+          router.push({
+            pathname: "/(app)/subject/[id]",
+            params: { id: data.id, subjectTitle: data.title },
+          })
+        }
       >
         <View style={styles.row}>
           {/* Icon box */}
@@ -52,7 +95,8 @@ export const SubjectCard = ({ data }: any) => {
           <View style={styles.rightColumn}>
             <View style={styles.descRow}>
               <Text style={styles.description}>{data.description}</Text>
-              <Text style={styles.percentageText}>{data.percentage}%</Text>
+              {/* Display the CALCULATED percentage */}
+              <Text style={styles.percentageText}>{displayPercentage}%</Text>
             </View>
 
             <View style={styles.progressBarBackground}>
@@ -60,7 +104,8 @@ export const SubjectCard = ({ data }: any) => {
                 style={[
                   styles.progressFill,
                   {
-                    width: `${data.percentage}%`,
+                    // Use the CALCULATED percentage for the width
+                    width: `${displayPercentage}%`,
                     backgroundColor: data.iconColor,
                   },
                 ]}

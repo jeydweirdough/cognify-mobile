@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { storage } from './storage';
+import { Subject } from './types';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8000';
 const TOKEN_KEY = 'cognify_token';
@@ -98,5 +99,24 @@ api.interceptors.response.use(
     return Promise.reject(error);
   }
 );
+
+export interface SubjectCreatePayload {
+    title: string;
+    // You can add more fields here if you expand the modal
+    description?: string;
+    // pqf_level?: number;
+}
+
+export const createSubject = async (data: SubjectCreatePayload) => { // <--- NEW FUNCTION
+    const response = await api.post('/subjects/', data);
+    return response.data; // Returns the success message and subject ID from the backend
+};
+
+export const getSubjectTopics = async (subjectId: string) => {
+  // Assuming a standard endpoint for fetching a single resource by ID: /subjects/{id}
+  const response = await api.get(`/subjects/${subjectId}`);
+  // The backend Subject model contains the 'topics: Topic[]' array.
+  return response.data as Subject;
+};
 
 export { api, API_URL, TOKEN_KEY, REFRESH_TOKEN_KEY };

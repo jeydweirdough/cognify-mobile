@@ -1,4 +1,6 @@
-import { api } from "@/lib/api";
+// index.tsx (LearningScreen.tsx)
+
+import { api, getSubjectTopics } from "@/lib/api"; // 💡 EDITED: Import getSubjectTopics
 import { useFonts } from "expo-font";
 import React, { useEffect, useState } from "react";
 import {
@@ -12,15 +14,13 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { FontAwesome5 } from "@expo/vector-icons";
+import { Topic } from "@/lib/types"; // 💡 Import Topic type if available
 
 // Assuming these are defined elsewhere or passed correctly
 import MotivationCard from "@/components/subjects/Motivation-quote";
-import {
-  SubjectCard,
-} from "@/components/subjects/SubjectCard"; 
+import { SubjectCard } from "@/components/subjects/SubjectCard";
 import Header from "@/components/ui/header";
 import { AddSubjectModal } from "@/components/subjects/AddSubjectModal";
-
 
 const Colors = {
   background: "#F8F8F8",
@@ -47,16 +47,32 @@ const COLOR_PALETTE = [
 interface BackendSubject {
   id: string;
   title: string;
-  description?: string; // Optional based on the role logic in subject_service.py
+  description?: string;
   topics_count: number;
   [key: string]: any;
 }
 
+// Define the enriched Subject structure for the UI
+interface UISubject {
+  id: string;
+  title: string;
+  description: string;
+  iconColor: string;
+  iconBgColor: string;
+  cardBgColor: string;
+  topicIds: string[]; // List of topic IDs for progress calculation
+}
+
 export default function LearningScreen() {
   const [loading, setLoading] = useState(true);
-  const [subjects, setSubjects] = useState<any[]>([]);
+  // 💡 EDITED: Use the new UISubject interface
+  const [subjects, setSubjects] = useState<UISubject[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [isModalVisible, setIsModalVisible] = useState(false);
+  
+  // 💡 NEW STATE: Store the global topic progress map
+  // This will be passed to SubjectCard to calculate overall progress
+  const [topicProgressMap, setTopicProgressMap] = useState<Record<string, number>>({});
 
   const openModal = () => setIsModalVisible(true);
   const closeModal = () => setIsModalVisible(false);
@@ -67,21 +83,24 @@ export default function LearningScreen() {
     "Poppins-Regular": require("@/assets/fonts/Poppins-Regular.ttf"),
   });
 
-  // NOTE: The description field is added on the client for the POST request
+  // --- NEW: Helper to get the current global progress ---
+  const getGlobalTopicProgress = () => {
+    // Access the global storage for all topic progress
+    const progressMap = (global as any).MODULE_PROGRESS || {};
+    return progressMap;
+  };
+
   const handleAddSubject = async (subjectTitle: string) => {
     closeModal();
     setLoading(true);
 
     try {
-      // NOTE: Your backend has an ADD TOPIC endpoint but not a dedicated ADD SUBJECT.
-      // Assuming a general POST to '/subjects/' might create a new subject, or this needs a dedicated endpoint.
-      // Keeping the existing POST logic for now, even if not fully aligned with the provided backend routes.
       await api.post("/subjects/", {
         subject_title: subjectTitle,
         description: `A new subject: ${subjectTitle}`,
       });
 
-      await fetchSubjects();
+      await fetchSubjectsWithProgress();
     } catch (error) {
       console.error("Failed to add subject:", error);
     } finally {
@@ -89,45 +108,59 @@ export default function LearningScreen() {
     }
   };
 
-  const fetchSubjects = async () => {
+  // 💡 EDITED: Main function to fetch subjects AND their topic/module IDs
+  const fetchSubjectsWithProgress = async () => {
     try {
-      // **Fetch from the dynamic backend endpoint**
-      const response = await api.get("/subjects/"); 
-      // The backend returns an object with a 'subjects' key, which contains the list
+      // 1. Fetch Subject List
+      const response = await api.get("/subjects/");
       const backendSubjects: BackendSubject[] = response.data.subjects || [];
+      const progressMap = getGlobalTopicProgress(); // Get current progress map
+      setTopicProgressMap(progressMap);
 
       if (backendSubjects.length === 0) {
-        // fallback to mock data
+        setSubjects([]);
         return;
       }
 
-     const formattedSubjects = backendSubjects.map(
-        (sub: BackendSubject, index: number) => {
-          const palette = COLOR_PALETTE[index % COLOR_PALETTE.length]; 
-          
-          // Use a simple mock calculation for percentage as the list endpoint doesn't provide it
-          const mockPercentage = (index * 15) % 100 + 10; 
+      // 2. Fetch Topics for each Subject in parallel
+      const subjectPromises = backendSubjects.map(
+        async (sub: BackendSubject, index: number) => {
+          const palette = COLOR_PALETTE[index % COLOR_PALETTE.length];
+          let topicIds: string[] = [];
+          
+          try {
+            // Call the endpoint used in SubjectModulesScreen.tsx
+            const topicsResponse = await getSubjectTopics(sub.id);
+            // Filter topics to only include those with content, as done in SubjectModulesScreen.tsx
+            const topicsWithContent = topicsResponse.topics.filter((t: Topic) => t.lecture_content);
+            topicIds = topicsWithContent.map((t: Topic) => t.id);
+            
+          } catch (error) {
+            console.error(`Failed to fetch topics for ${sub.title}:`, error);
+            // Default to empty array on failure
+          }
+          
+          return {
+            id: sub.id,
+            title: sub.title,
+            description: sub.description || "No description available",
+            // The percentage will be CALCULATED in SubjectCard
+            iconColor: palette.iconColor,
+            iconBgColor: palette.iconBgColor,
+            cardBgColor: palette.cardBgColor,
+            topicIds: topicIds, // Pass the list of relevant topic IDs
+          };
+        }
+      );
 
-          return {
-            // **FIX: Map 'title' directly to 'title' (instead of 'name')**
-            id: sub.id, 
-            title: sub.title, 
-            description: sub.description || "No description available", // Map 'description'
-            percentage: mockPercentage, // Use the mock percentage
-            
-            // Assign color palette cyclically
-            iconColor: palette.iconColor,
-            iconBgColor: palette.iconBgColor,
-            cardBgColor: palette.cardBgColor,
-          };
-        }
-    
-      );
+      // Wait for all topic fetches to complete
+      const formattedSubjects: UISubject[] = await Promise.all(subjectPromises);
 
       setSubjects(formattedSubjects);
+
     } catch (error) {
-      console.error("Failed to fetch subjects, falling back to mock data:", error); 
-      // fallback to mock data on error
+      console.error("Failed to fetch subjects or their topics:", error);
+      setSubjects([]);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -135,12 +168,13 @@ export default function LearningScreen() {
   };
 
   useEffect(() => {
-    fetchSubjects();
+    fetchSubjectsWithProgress();
   }, []);
 
   const onRefresh = () => {
     setRefreshing(true);
-    fetchSubjects();
+    // 💡 EDITED: Use the new function for refreshing
+    fetchSubjectsWithProgress(); 
   };
 
   if (loading || !fontsLoaded) {
@@ -155,7 +189,7 @@ export default function LearningScreen() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: "#F9F9F9" }}>
-      <Header title="Materials" />
+      <Header title="Learning" />
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         refreshControl={
@@ -172,7 +206,15 @@ export default function LearningScreen() {
 
         {subjects.length > 0 ? (
           subjects.map((subject) => (
-            <SubjectCard key={subject.id} data={subject} />
+            // 💡 EDITED: Pass totalTopics, topicIds, and the topicProgressMap
+            <SubjectCard 
+                key={subject.id} 
+                data={{
+                    ...subject,
+                    topicProgressMap: topicProgressMap, // Pass the global progress map
+                    totalTopics: subject.topicIds.length, // Pass the count
+                }} 
+            />
           ))
         ) : (
           <View style={styles.centered}>
