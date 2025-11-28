@@ -1,10 +1,12 @@
-import { AuthProvider, useAuth } from '../lib/auth';
 import { Href, Stack, useRouter, useSegments } from 'expo-router';
-import { useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { ActivityIndicator, View } from 'react-native';
+import { useEffect } from 'react';
+import { AuthProvider, useAuth } from '../lib/auth';
 
-// --- NEW IMPORTS ---
+// --- IMPORT THE NEW SCREEN ---
+import LoadingScreen from '../components/loading-screen';
+// -----------------------------
+
 import {
   Poppins_400Regular,
   Poppins_600SemiBold,
@@ -12,9 +14,7 @@ import {
   useFonts,
 } from '@expo-google-fonts/poppins';
 import * as SplashScreen from 'expo-splash-screen';
-// --- END NEW IMPORTS ---
 
-// Keep the app splash screen visible while fonts load
 SplashScreen.preventAutoHideAsync();
 
 function RootLayoutNav() {
@@ -22,18 +22,15 @@ function RootLayoutNav() {
   const segments = useSegments();
   const router = useRouter();
 
-  // --- NEW FONT LOADING LOGIC ---
   const [fontsLoaded, fontError] = useFonts({
     Poppins_400Regular,
     Poppins_600SemiBold,
     Poppins_700Bold,
   });
-  // --- END NEW FONT LOADING LOGIC ---
 
   useEffect(() => {
     if (!initialized || (!fontsLoaded && !fontError)) return;
 
-    // Hide splash screen once fonts are loaded and auth is initialized
     SplashScreen.hideAsync();
 
     const inAuthGroup = segments[0] === '(auth)';
@@ -45,14 +42,12 @@ function RootLayoutNav() {
     }
   }, [token, initialized, fontsLoaded, fontError, segments, router]);
 
-  // Show loading spinner while auth/fonts are loading
+  // --- THIS IS WHERE WE SHOW IT FIRST ---
+  // If fonts aren't loaded OR auth isn't ready, return LoadingScreen
   if (!initialized || (!fontsLoaded && !fontError)) {
-    return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-        <ActivityIndicator size="large" />
-      </View>
-    );
+    return <LoadingScreen />;
   }
+  // --------------------------------------
 
   return (
     <>
