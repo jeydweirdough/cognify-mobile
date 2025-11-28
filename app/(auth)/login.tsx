@@ -1,15 +1,16 @@
 import { Feather } from '@expo/vector-icons';
 import { Link } from 'expo-router';
-import { useRef, useState } from 'react'; // Import useRef
+import { useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   Pressable,
   SafeAreaView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
-  View
+  View,
 } from 'react-native';
 import { useAuth } from '../../lib/auth';
 
@@ -27,22 +28,31 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [errors, setErrors] = useState({ email: false, password: false });
+
+  const [errorMsg, setErrorMsg] = useState({ email: '', password: '' });
 
   const { login } = useAuth();
-
-  // 1. Create a ref for the password input
   const passwordInputRef = useRef<TextInput>(null);
 
   const handleLogin = async () => {
-    const newErrors = {
-      email: !email,
-      password: !password,
-    };
+    // 1. Reset Errors
+    setErrorMsg({ email: '', password: '' });
 
-    setErrors(newErrors);
+    // 2. Client-side Validation
+    let isValid = true;
+    const newErrors = { email: '', password: '' };
 
-    if (newErrors.email || newErrors.password) {
+    if (!email) {
+      newErrors.email = 'Email is required';
+      isValid = false;
+    }
+    if (!password) {
+      newErrors.password = 'Password is required';
+      isValid = false;
+    }
+
+    if (!isValid) {
+      setErrorMsg(newErrors);
       return;
     }
 
@@ -50,7 +60,52 @@ export default function LoginScreen() {
     try {
       await login(email, password);
     } catch (e: any) {
-      console.log("Login error caught by UI");
+      console.log("Login Error:", e.response?.status, e.response?.data);
+
+      const status = e.response?.status;
+      const data = e.response?.data;
+      const detail = data?.detail;
+
+      // --- HANDLE 422 VALIDATION ERRORS ---
+      if (status === 422 && Array.isArray(detail)) {
+        let hasMappedError = false;
+
+        detail.forEach((err: any) => {
+          const fieldName = err.loc?.[1];
+
+          if (fieldName === 'email') {
+            // Check if backend says "value is not a valid email address"
+            setErrorMsg(prev => ({ ...prev, email: 'Invalid email format' }));
+            hasMappedError = true;
+          }
+          if (fieldName === 'password') {
+            // 👇 FIXED: Ignore backend message, always say "Invalid password"
+            setErrorMsg(prev => ({ ...prev, password: 'Invalid password' }));
+            hasMappedError = true;
+          }
+        });
+
+        if (!hasMappedError) {
+          Alert.alert('Login Failed', 'Please check your inputs.');
+        }
+        return;
+      }
+
+      // --- HANDLE 400/401 (Wrong Credentials) ---
+      if (status === 401 || status === 400) {
+        // If the error seems related to credentials, usually we flag the password
+        setErrorMsg(prev => ({ ...prev, password: 'Invalid password' }));
+      }
+      else if (status === 404) {
+        // User not found
+        setErrorMsg(prev => ({ ...prev, email: 'Account not found' }));
+      }
+      else {
+        // Fallback
+        const fallbackMsg = typeof detail === 'string' ? detail : e.message;
+        Alert.alert('Login Failed', fallbackMsg || 'An unexpected error occurred.');
+      }
+
     } finally {
       setIsLoading(false);
     }
@@ -73,24 +128,22 @@ export default function LoginScreen() {
             <TextInput
               style={[
                 styles.input,
-                errors.email && styles.inputError
+                !!errorMsg.email && styles.inputError
               ]}
               placeholder="student_psych@cvsu.edu.ph"
               value={email}
               onChangeText={(text) => {
                 setEmail(text);
-                setErrors(prev => ({ ...prev, email: false }));
+                if (errorMsg.email) setErrorMsg(prev => ({ ...prev, email: '' }));
               }}
               autoCapitalize="none"
               keyboardType="email-address"
               placeholderTextColor="#999"
-
-              // 2. Add keyboard navigation props
               returnKeyType="next"
               onSubmitEditing={() => passwordInputRef.current?.focus()}
               blurOnSubmit={false}
             />
-            {errors.email && <Text style={styles.errorText}>Email is required</Text>}
+            {!!errorMsg.email && <Text style={styles.errorText}>{errorMsg.email}</Text>}
           </View>
 
           {/* Password Input */}
@@ -98,22 +151,19 @@ export default function LoginScreen() {
             <Text style={styles.label}>Password</Text>
             <View style={[
               styles.passwordContainer,
-              errors.password && styles.inputError
+              !!errorMsg.password && styles.inputError
             ]}>
               <TextInput
-                // 3. Attach the ref here
                 ref={passwordInputRef}
                 style={styles.passwordInput}
                 placeholder="***************"
                 value={password}
                 onChangeText={(text) => {
                   setPassword(text);
-                  setErrors(prev => ({ ...prev, password: false }));
+                  if (errorMsg.password) setErrorMsg(prev => ({ ...prev, password: '' }));
                 }}
                 secureTextEntry={!showPassword}
                 placeholderTextColor="#999"
-
-                // 4. Set return key to submit
                 returnKeyType="go"
                 onSubmitEditing={handleLogin}
               />
@@ -128,7 +178,7 @@ export default function LoginScreen() {
                 />
               </TouchableOpacity>
             </View>
-            {errors.password && <Text style={styles.errorText}>Password is required</Text>}
+            {!!errorMsg.password && <Text style={styles.errorText}>{errorMsg.password}</Text>}
           </View>
 
           <Pressable
@@ -211,8 +261,9 @@ const styles = StyleSheet.create({
   errorText: {
     color: THEME.errorRed,
     fontSize: 12,
-    marginTop: 4,
+    marginTop: 5,
     marginLeft: 4,
+    fontWeight: '500',
   },
   passwordContainer: {
     flexDirection: 'row',

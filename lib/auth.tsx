@@ -1,12 +1,12 @@
 // lib/auth.tsx (Fixed)
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { storage } from './storage';
 import { Href, useRouter, useSegments } from 'expo-router';
-import { api, TOKEN_KEY, REFRESH_TOKEN_KEY } from './api';
+import React, { createContext, useContext, useEffect, useState } from 'react';
 import { Alert } from 'react-native';
+import { api, REFRESH_TOKEN_KEY, TOKEN_KEY } from './api';
+import { storage } from './storage';
 
 export interface User {
-// ... (User interface remains the same)
+  // ... (User interface remains the same)
   username: string;
   id: string;
   email: string;
@@ -22,7 +22,7 @@ interface AuthContextType {
   initialized: boolean;
   login: (email: string, pass: string) => Promise<void>;
   // 👇 FIX 1: Update signup signature to include first and last name
-  signup: (email: string, pass: string, firstName: string, lastName: string) => Promise<void>; 
+  signup: (email: string, pass: string, firstName: string, lastName: string) => Promise<void>;
   logout: () => void;
   setUser: React.Dispatch<React.SetStateAction<User | null>>;
   updateProfile: (updates: Partial<User>) => Promise<void>;
@@ -39,7 +39,7 @@ export function useAuth() {
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-// ... (state variables and useEffects remain the same)
+  // ... (state variables and useEffects remain the same)
   const [token, setToken] = useState<string | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [initialized, setInitialized] = useState(false);
@@ -74,18 +74,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [token, initialized, segments]);
 
- const fetchUserProfile = async () => {
+  const fetchUserProfile = async () => {
     try {
       // FIX: Changed from '/profiles/' to '/profiles/me' based on your backend
       const { data } = await api.get('/profiles/me');
-      
+
       // Transform response to match User interface
       // Backend returns { role, data: { profile, ... } }
       const profileData = data.data?.profile || data;
-      
+
       setUser({
         // 👇 FIX: Add 'username' property here
-        username: profileData.username || profileData.email, 
+        username: profileData.username || profileData.email,
         id: profileData.id || profileData.uid,
         email: profileData.email,
         first_name: profileData.first_name,
@@ -100,32 +100,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const login = async (email: string, pass: string) => {
-// ... (login function is unchanged)
     try {
-      const { data } = await api.post('/auth/login', { 
-        email, 
-        password: pass 
+      const { data } = await api.post('/auth/login', {
+        email,
+        password: pass
       });
-      
-      // Store both tokens
+
       await storage.setItem(TOKEN_KEY, data.token);
       await storage.setItem(REFRESH_TOKEN_KEY, data.refresh_token);
-      
+
       setToken(data.token);
       await fetchUserProfile();
-      
+
       router.replace('/(app)' as Href);
     } catch (e: any) {
       console.error('Login failed:', e.response?.data || e.message);
-      
-      const errorMessage = e.response?.data?.detail || 'Login failed. Please try again.';
-      Alert.alert('Login Failed', errorMessage);
+
+      // ❌ REMOVE THIS ALERT so the Login Screen handles the UI exclusively
+      // Alert.alert('Login Failed', errorMessage); 
+
+      // ✅ KEEP THIS! It sends the error to login.tsx
       throw e;
     }
   };
 
   // 👇 FIX 2: Update signup implementation to accept and use first and last name
-  const signup = async (email: string, pass: string, firstName: string, lastName: string) => { 
+  const signup = async (email: string, pass: string, firstName: string, lastName: string) => {
     try {
       await api.post('/auth/signup', {
         email,
@@ -133,30 +133,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         first_name: firstName, // Sent to backend
         last_name: lastName,   // Sent to backend
       });
-      
+
       Alert.alert('Success', 'Account created! Logging you in...');
       await login(email, pass);
     } catch (e: any) {
       console.error('Signup failed:', e.response?.data || e.message);
-      
+
       // The backend returns a detail of type Array(3) if fields are missing, 
       // which is why the UI logging "Signup failed: {detail: Array(3)}"
-      const errorMessage = e.response?.data?.detail 
-        ? (Array.isArray(e.response.data.detail) 
-          ? 'Missing required fields (First Name/Last Name).' 
-          : e.response.data.detail) 
+      const errorMessage = e.response?.data?.detail
+        ? (Array.isArray(e.response.data.detail)
+          ? 'Missing required fields (First Name/Last Name).'
+          : e.response.data.detail)
         : 'Signup failed. Please try again.';
 
       Alert.alert('Signup Failed', errorMessage);
       throw e;
     }
   };
-// ... (rest of the file is unchanged)
+  // ... (rest of the file is unchanged)
   const updateProfile = async (updates: Partial<User>) => {
     try {
       // FIX: Changed from '/profiles/' to '/profiles/me'
       const { data } = await api.put('/profiles/me', updates);
-      
+
       // Update local user state
       setUser((prev) => prev ? { ...prev, ...updates } : null);
       Alert.alert('Success', 'Profile updated successfully');
