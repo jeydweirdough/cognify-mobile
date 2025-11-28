@@ -1,8 +1,10 @@
 export const Colors = {
   primary: '#8A4CFF', // Main purple
+  primaryLight: '#FAD9F5', // selection background
   background: '#F4F0FF', // Light lavender background
   white: '#FFFFFF',
   text: '#333333',
+  textGreen: '#2F4838',
   textLight: '#9A9A9A',
   inputBackground: '#FFFFFF',
   placeholder: '#CDCDCD',
