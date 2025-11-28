@@ -23,8 +23,6 @@ export const Fonts = {
   // Dela Gothic One
   delaGothicOneRegular: 'DelaGothicOne-Regular',
 
-  regular: 'LexendDeca-Regular',
-  medium: 'LexendDeca-Medium', 
 };
 
 

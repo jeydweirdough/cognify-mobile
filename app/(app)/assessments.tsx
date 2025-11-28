@@ -1,116 +1,296 @@
-import { Feather, Ionicons } from "@expo/vector-icons";
+/// @/components/diagnostic/Assessments.tsx
+
 import { router } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
-import {
-  Alert,
-  Dimensions,
-  Image,
-  Pressable,
-  SafeAreaView,
-  ScrollView,
-  StatusBar,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import { Alert, Dimensions, SafeAreaView, StatusBar } from "react-native";
+// Assuming Fonts import is available from parent context/structure
 import { Fonts } from "../../constants/cognify-theme";
 
-const { width } = Dimensions.get("window");
-const INITIAL_TIME_SECONDS = 600; // 10 minutes
+// Import separated components
+import { AssessmentStartScreen } from "@/components/diagnostic/AssessmentStartScreen";
+import { AssessmentResultScreen } from "@/components/diagnostic/AssessmentResultScreen";
+import { AssessmentReviewScreen } from "@/components/diagnostic/AssessmentReviewScreen";
+import { QuizScreen } from "@/components/diagnostic/QuizScreen";
 
-// --- UPDATED DATA: PSYCHOLOGY QUESTIONS ---
-const QUIZ_DATA = [
+const { width } = Dimensions.get("window");
+const INITIAL_TIME_SECONDS = 1200; // 20 minutes for 20 questions
+
+// --- New Interface for Subject Scores (Needed by AssessmentResultScreen) ---
+interface SubjectScore {
+  subject: string;
+  correct: number;
+  total: number;
+}
+// -------------------------------------------------------------------------
+
+interface QuestionData {
+  id: number;
+  subject: string;
+  question: string;
+  options: string[];
+  correctIndex: number;
+}
+
+// --- UPDATED DATA: 4 SUBJECTS, 20 ITEMS TOTAL (Existing Data) ---
+const QUIZ_DATA: QuestionData[] = [
+  // --- ABNORMAL PSYCHOLOGY (Q1 - Q5) ---
   {
     id: 1,
-    question:
-      "Which of the following best defines the primary focus of Industrial-Organizational (I/O) Psychology?",
+    subject: "Abnormal Psychology",
+    question: "A substance is defined as any:",
     options: [
-      "Diagnosing and treating mental disorders",
-      "The scientific study of human behavior in the workplace",
-      "Understanding the development of children",
-      "Analyzing the anatomy of the brain",
+      "Over-the-counter prescription drug",
+      "Drug that has psychedelic effects",
+      "Product that could potentially create an addiction",
+      "Natural or synthesized product that has psychoactive effects",
     ],
-    correctIndex: 1, // Behavior in workplace
+    correctIndex: 3,
   },
   {
     id: 2,
-    question:
-      "The 'Hawthorne Effect' suggests that employees perform better when:",
+    subject: "Abnormal Psychology",
+    question: "Identify the physiological effect of nicotine:",
     options: [
-      "They are paid higher wages",
-      "The lighting in the room is increased",
-      "They know they are being observed or receive attention",
-      "They work in isolation",
+      "It resembles a fight-or-flight response",
+      "It reduces stress and anxiety",
+      "It suppresses several biochemicals including dopamine and norepinephrine",
+      "It reduces the craving to smoke more",
     ],
-    correctIndex: 2, // Observed/Attention
+    correctIndex: 0,
   },
   {
     id: 3,
+    subject: "Abnormal Psychology",
     question:
-      "In the context of Job Analysis, what does the acronym KSAO stand for?",
+      "Korsakoff’s syndrome is caused by damage to ___________ and is classified as a(n) ___________:",
     options: [
-      "Knowledge, Skills, Abilities, and Other characteristics",
-      "Key Systems, Analysis, and Objectives",
-      "Knowledge, Strategy, Action, and Organization",
-      "Key Skills, Aptitude, and Operations",
+      "Vertebrae; dementia",
+      "Adrenal glands; delirium",
+      "Carotid artery; medical disease",
+      "Thalamus; amnesic disorder",
     ],
-    correctIndex: 0, // Knowledge, Skills...
+    correctIndex: 3,
   },
   {
     id: 4,
+    subject: "Abnormal Psychology",
     question:
-      "Which theory of motivation suggests that human needs are arranged in a hierarchy, starting with physiological needs?",
+      "The person diagnosed with Alzheimer’s disease at age 45 would be considered to have an:",
     options: [
-      "Herzberg's Two-Factor Theory",
-      "Vroom's Expectancy Theory",
-      "Maslow's Hierarchy of Needs",
-      "Adams' Equity Theory",
+      "Premature-onset type",
+      "Early-onset type",
+      "Late-onset type",
+      "Post-onset type",
     ],
-    correctIndex: 2, // Maslow
+    correctIndex: 1,
   },
   {
     id: 5,
+    subject: "Abnormal Psychology",
     question:
-      "Which leadership style is characterized by the leader making all decisions with little to no input from the team?",
+      "Which of the following is the difference between “normal” memory lapses and dementia?",
     options: [
-      "Transformational Leadership",
-      "Democratic Leadership",
-      "Laissez-faire Leadership",
-      "Autocratic Leadership",
+      "With normal memory lapses, the person is much older than someone with dementia",
+      "In dementia, the memory does not return spontaneously and may not respond to memory cues",
+      "With normal memory lapses, the person is probably entering the onset of dementia",
+      "In dementia, the memory loss is associated with psychological effects of stress",
     ],
-    correctIndex: 3, // Autocratic
+    correctIndex: 1,
+  },
+
+  // --- INDUSTRIAL PSYCHOLOGY (Q6 - Q10) ---
+  {
+    id: 6,
+    subject: "Industrial Psychology",
+    question: "Which term refers to the consistency of measurement across time?",
+    options: ["Reliability", "Validity", "Accuracy", "Predictability"],
+    correctIndex: 0,
+  },
+  {
+    id: 7,
+    subject: "Industrial Psychology",
+    question:
+      "The process of verifying that there is a performance deficiency and determining if such deficiency should be corrected through training or through some other means is called:",
+    options: [
+      "Needs analysis",
+      "Task analysis",
+      "Performance analysis",
+      "Training strategy",
+      "Development planning",
+    ],
+    correctIndex: 0,
+  },
+  {
+    id: 8,
+    subject: "Industrial Psychology",
+    question:
+      "When an interview is used to predict future job performance on the basis of an applicant’s oral responses to oral inquiries, it is called a(n) _____ interview:",
+    options: ["Selection", "Appraisal", "Exit", "Preview", "Structured"],
+    correctIndex: 4,
+  },
+  {
+    id: 9,
+    subject: "Industrial Psychology",
+    question:
+      "According to Herzberg, ________ needs produce job satisfaction, and ________ needs produce job dissatisfaction:",
+    options: [
+      "Motivator; hygiene",
+      "Hygiene; motivator",
+      "External; internal",
+      "Satisfier; motivator",
+    ],
+    correctIndex: 0,
+  },
+  {
+    id: 10,
+    subject: "Industrial Psychology",
+    question:
+      "The psychological and physical reaction to certain events or situations is called:",
+    options: ["Stress", "Strain", "Stressors", "Eustress"],
+    correctIndex: 0,
+  },
+
+  // --- PSYCHOLOGICAL ASSESSMENT (Q11 - Q15) ---
+  {
+    id: 11,
+    subject: "Psychological Assessment",
+    question:
+      "A Pearson r correlation coefficient describes the ______ and the ______ of a linear relationship between two interval scale or ratio scale variables:",
+    options: [
+      "Level; amount",
+      "Similarity; importance",
+      "Direction; strength",
+      "Variability; significance",
+    ],
+    correctIndex: 2,
+  },
+  {
+    id: 12,
+    subject: "Psychological Assessment",
+    question: "The term class intervals is best associated with:",
+    options: [
+      "A socioeconomic status of a sample of test takers",
+      "A frequency distribution of test taker scores",
+      "A grouped frequency distribution of test taker scores",
+      "Measures of central tendency",
+    ],
+    correctIndex: 2,
+  },
+  {
+    id: 13,
+    subject: "Psychological Assessment",
+    question:
+      "Credit for devising the first successful psychological testing in the modern era is usually given to:",
+    options: [
+      "Francis Galton",
+      "Alfred Binet",
+      "Wilhelm Wundt",
+      "James McKeen Cattell",
+    ],
+    correctIndex: 1,
+  },
+  {
+    id: 14,
+    subject: "Psychological Assessment",
+    question: "He coined the term mental tests:",
+    options: [
+      "James McKeen Cattell",
+      "Raymond Cattell",
+      "Lewis Terman",
+      "Alfred Binet",
+    ],
+    correctIndex: 0,
+  },
+  {
+    id: 15,
+    subject: "Psychological Assessment",
+    question:
+      "Correction which expects an examinee’s degree of psychological defensiveness is perhaps the most sophisticated of the _____________ scale:",
+    options: ["Clinical", "Testing", "Reliability", "Validity"],
+    correctIndex: 3, // Changed from Clinical to Validity based on standard use of validity/defensiveness scales in personality tests
+  },
+
+  // --- THEORIES OF PERSONALITY (Q16 - Q20) ---
+  {
+    id: 16,
+    subject: "Theories of Personality",
+    question:
+      "Every time two-year-old Kati is given a bath, she plays with her genital area. If her parents punish her, she is likely to experience frustration. Which of the following can explain if said child becomes sexually preoccupied?",
+    options: ["Freud", "Skinner", "Bandura", "Erickson"],
+    correctIndex: 0,
+  },
+  {
+    id: 17,
+    subject: "Theories of Personality",
+    question:
+      "The actualizing tendency and self-concept are to _______ as reciprocal determination and self-efficacy are to ______:",
+    options: [
+      "Abraham Maslow; Hans Eysenck",
+      "Alfred Adler; Albert Bandura",
+      "Raymond Cattell; Carl Jung",
+      "Carl Rogers; Albert Bandura",
+    ],
+    correctIndex: 3,
+  },
+  {
+    id: 18,
+    subject: "Theories of Personality",
+    question:
+      "During the meeting, an employee just went along with the majority decision. This best reflects which of the following?",
+    options: ["Pakikitungo", "Hiya", "Pakikibagay", "Pakikisama"],
+    correctIndex: 3,
+  },
+  {
+    id: 19,
+    subject: "Theories of Personality",
+    question:
+      "__________ theory maximized and _________ theory minimized the role of the unconscious:",
+    options: [
+      "Trait; humanistic",
+      "Psychoanalytic; behaviorist",
+      "Psychoanalytic; humanistic",
+      "Trait; behaviorist",
+    ],
+    correctIndex: 1, // Changed from Psychoanalytic; humanistic to Psychoanalytic; behaviorist (Behaviorism minimizes unconscious the most)
+  },
+  {
+    id: 20,
+    subject: "Theories of Personality",
+    question:
+      "A psychiatrist who explains pathological behavior as a conflict between underlying psychological forces is using the ________ model:",
+    options: ["Psychoanalytical", "Behavioral", "Medical", "Humanistic"],
+    correctIndex: 0,
   },
 ];
 
-// --- START SCREEN ---
-const AssessmentStartScreen = ({
-  onStartPress,
-}: {
-  onStartPress: () => void;
-}) => {
-  return (
-    <View style={startStyles.container}>
-      <Text style={startStyles.title}>
-        Let's Get Started{"\n"}with Your Baseline Knowledge
-      </Text>
-      <View style={startStyles.illustrationContainer}>
-        <Image
-          source={require("@/assets/images/got_this.png")}
-          style={{ width: 140, height: 140, resizeMode: "contain" }}
-        />
-      </View>
-      <Text style={startStyles.subtitle}>You got this!</Text>
-      <Text style={startStyles.description}>
-        This quick assessment helps us understand your current strengths and
-        learning needs. Your results will guide your personalized study plan.
-      </Text>
-      <TouchableOpacity style={startStyles.button} onPress={onStartPress}>
-        <Text style={startStyles.buttonText}>START NOW!</Text>
-      </TouchableOpacity>
-    </View>
-  );
+// --- UTILITY FUNCTION FOR SAVING RESULTS ---
+// NOTE: Assuming window.storage is a placeholder for AsyncStorage or similar
+const saveAssessmentResults = async (
+  score: number,
+  totalQuestions: number,
+  subjectScores: SubjectScore[]
+) => {
+  try {
+    const assessmentData = {
+      score,
+      totalQuestions,
+      subjectScores,
+      timestamp: new Date().toISOString(),
+    };
+
+    // Replace with your actual storage mechanism (e.g., await AsyncStorage.setItem)
+    /*
+    await window.storage.set(
+      'diagnostic_assessment_results',
+      JSON.stringify(assessmentData)
+    );
+    */
+    console.log("Assessment results saved successfully:", assessmentData);
+  } catch (error) {
+    console.error("Failed to save assessment results:", error);
+  }
 };
+// ------------------------------------------
 
 // --- MAIN SCREEN ---
 export default function AssessmentsScreen() {
@@ -132,7 +312,7 @@ export default function AssessmentsScreen() {
 
   // Timer State
   const [timeLeft, setTimeLeft] = useState(INITIAL_TIME_SECONDS);
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const timerRef = useRef<number | null>(null);
 
   // --- THEME COLORS ---
   const themeColors = {
@@ -149,6 +329,9 @@ export default function AssessmentsScreen() {
 
   const currentQuestion = QUIZ_DATA[currentQuestionIndex];
   const progressPercent = ((currentQuestionIndex + 1) / QUIZ_DATA.length) * 100;
+  const isSubjectStart =
+    currentQuestionIndex === 0 ||
+    currentQuestion.subject !== QUIZ_DATA[currentQuestionIndex - 1].subject;
 
   // --- TIMER LOGIC ---
   useEffect(() => {
@@ -161,7 +344,7 @@ export default function AssessmentsScreen() {
           }
           return prev - 1;
         });
-      }, 1000);
+      }, 1000) as unknown as number; // Use as number for proper interval ID type
     }
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
@@ -176,13 +359,33 @@ export default function AssessmentsScreen() {
 
   // --- HANDLERS ---
   const handleStart = () => setIsQuizStarted(true);
+  const handleReviewPress = () => setIsReviewing(true);
+  const routerBack = () => router.back();
+
+  // FIX: Updated finishQuiz to calculate and save results before setting isQuizFinished
+  const finishQuiz = (timedOut = false) => {
+    // 1. Calculate scores immediately before setting state to finished
+    const subjectScores = calculateSubjectScores();
+
+    // 2. Save results using the current score and subjectScores
+    saveAssessmentResults(score, QUIZ_DATA.length, subjectScores);
+
+    setIsQuizFinished(true);
+    if (timerRef.current) clearInterval(timerRef.current);
+    if (timedOut)
+      Alert.alert("Time's Up!", "Your assessment was submitted automatically.");
+  };
 
   const handleNext = () => {
     const updatedAnswers = [...userAnswers];
     updatedAnswers[currentQuestionIndex] = selectedOptionIndex;
     setUserAnswers(updatedAnswers);
 
-    if (selectedOptionIndex === currentQuestion.correctIndex) {
+    // Only update score if an option was selected and it was correct
+    if (
+      selectedOptionIndex !== null &&
+      selectedOptionIndex === currentQuestion.correctIndex
+    ) {
       setScore((prev) => prev + 1);
     }
 
@@ -194,12 +397,27 @@ export default function AssessmentsScreen() {
     }
   };
 
-  const finishQuiz = (timedOut = false) => {
-    setIsQuizFinished(true);
-    if (timerRef.current) clearInterval(timerRef.current);
-    if (timedOut)
-      Alert.alert("Time's Up!", "Your assessment was submitted automatically.");
+  // --- KNOWLEDGE MAPPING CALCULATION ---
+  const calculateSubjectScores = (): SubjectScore[] => {
+    const subjectScoresMap = QUIZ_DATA.reduce((acc, question, index) => {
+      const subject = question.subject;
+      const isCorrect =
+        userAnswers[index] !== null &&
+        userAnswers[index] === question.correctIndex;
+
+      if (!acc[subject]) {
+        acc[subject] = { subject: subject, correct: 0, total: 0 };
+      }
+      acc[subject].total += 1;
+      if (isCorrect) {
+        acc[subject].correct += 1;
+      }
+      return acc;
+    }, {} as Record<string, SubjectScore>);
+
+    return Object.values(subjectScoresMap);
   };
+  // ---------------------------------------------------
 
   // --- RENDER: START SCREEN ---
   if (!isQuizStarted) {
@@ -211,613 +429,44 @@ export default function AssessmentsScreen() {
     );
   }
 
-  // --- RENDER: REVIEW SCREEN (UPDATED HEADER) ---
+  // --- RENDER: REVIEW SCREEN ---
   if (isReviewing) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: "#FFFFFF" }]}>
-        <StatusBar barStyle="dark-content" />
-
-        {/* Review Header - Updated */}
-        <View style={styles.reviewHeader}>
-          {/* Back To Home Button (Arrow + Text) */}
-          <Pressable
-            style={styles.reviewBackButton}
-            onPress={() => router.push("/")} // Navigate to Home
-          >
-            <Ionicons name="arrow-back" size={20} color="#381E72" />
-            <Text style={styles.reviewBackText}>Back to Home</Text>
-          </Pressable>
-
-          <View style={styles.reviewTitleContainer}>
-            <Text style={styles.reviewHeaderTitle} numberOfLines={2}>
-              Introduction to Industrial and Organizational Psychology
-            </Text>
-            <Text style={styles.reviewHeaderSubtitle}>Review Answers</Text>
-          </View>
-        </View>
-
-        <ScrollView contentContainerStyle={styles.reviewScrollContent}>
-          {QUIZ_DATA.map((question, index) => {
-            const userAnswerIndex = userAnswers[index];
-            const isCorrect = userAnswerIndex === question.correctIndex;
-
-            return (
-              <View key={question.id} style={styles.reviewQuestionContainer}>
-                <View style={styles.reviewQuestionLabelContainer}>
-                  <Text style={styles.reviewQuestionLabel}>
-                    Question {index + 1}
-                  </Text>
-                  <View style={styles.reviewUnderline} />
-                </View>
-                <Text style={styles.reviewQuestionText}>
-                  {question.question}
-                </Text>
-
-                {!isCorrect && userAnswerIndex !== null && (
-                  <View style={styles.reviewAnswerRow}>
-                    <Ionicons name="close-circle" size={24} color="#FF5252" />
-                    <Text
-                      style={[styles.reviewAnswerText, { color: "#FF5252" }]}
-                    >
-                      {question.options[userAnswerIndex]}
-                    </Text>
-                  </View>
-                )}
-
-                <View style={styles.reviewAnswerRow}>
-                  <Ionicons name="checkmark-circle" size={24} color="#2E7D32" />
-                  <Text style={[styles.reviewAnswerText, { color: "#2E7D32" }]}>
-                    {question.options[question.correctIndex]}
-                  </Text>
-                </View>
-              </View>
-            );
-          })}
-        </ScrollView>
-      </SafeAreaView>
+      <AssessmentReviewScreen QUIZ_DATA={QUIZ_DATA} userAnswers={userAnswers} />
     );
   }
 
-  // --- RENDER: RESULT SCREEN ---
+  // --- RENDER: RESULT SCREEN (FIXED) ---
   if (isQuizFinished) {
-    const finalScore =
-      selectedOptionIndex === currentQuestion.correctIndex ? score + 1 : score;
-    const passed = finalScore >= QUIZ_DATA.length / 2; // 50% passing
-
-    // Dynamic variables for Pass vs Fail
-    const titleText = passed ? "Excellent!" : "Keep Trying!";
-    const titleColor = passed ? "#4CAF50" : "#E53935"; // Green vs Red
-    const iconName = passed ? "happy" : "sad";
-    const iconColor = passed ? "#FFC107" : "#BDBDBD"; // Gold vs Grey
-    const starColor = passed ? "#FFC107" : "#E0E0E0"; // Gold vs Light Grey
+    const subjectScores = calculateSubjectScores(); // Calculate scores here to pass to result screen
 
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: "#FFFFFF" }]}>
-        <View style={styles.resultContainer}>
-          <Text style={[styles.resultTitleText, { color: titleColor }]}>
-            {titleText}
-          </Text>
-
-          <View style={styles.smileyContainer}>
-            <Ionicons name={iconName} size={100} color={iconColor} />
-          </View>
-
-          <View style={styles.starsRow}>
-            <Ionicons
-              name="star"
-              size={32}
-              color={starColor}
-              style={styles.starSide}
-            />
-            <Ionicons
-              name="star"
-              size={42}
-              color={starColor}
-              style={styles.starCenter}
-            />
-            <Ionicons
-              name="star"
-              size={32}
-              color={starColor}
-              style={styles.starSide}
-            />
-          </View>
-
-          <Text style={styles.mockText}>Mock # 1</Text>
-
-          <Text
-            style={[
-              styles.passedText,
-              { color: passed ? "#6E3D84" : "#D32F2F" },
-            ]}
-          >
-            {passed ? "Exam Passed !" : "Exam Failed"}
-          </Text>
-
-          <Text style={styles.scoreDescription}>
-            You answered {finalScore} out of {QUIZ_DATA.length} questions
-            correctly.
-          </Text>
-
-          <Pressable
-            style={styles.reviewButton}
-            onPress={() => setIsReviewing(true)}
-          >
-            <Text style={styles.reviewButtonText}>Review Answers</Text>
-          </Pressable>
-        </View>
-      </SafeAreaView>
+      <AssessmentResultScreen
+        score={score}
+        totalQuestions={QUIZ_DATA.length}
+        onReviewPress={handleReviewPress}
+        // subjectScores={subjectScores} 
+      />
     );
   }
 
   // --- RENDER: QUIZ SCREEN ---
   return (
-    <SafeAreaView
-      style={[styles.container, { backgroundColor: themeColors.background }]}
-    >
-      <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} />
-
-      <View style={styles.header}>
-        <Pressable
-          style={styles.backButton}
-          onPress={() =>
-            Alert.alert("Exit?", "Progress will be lost", [
-              { text: "Cancel" },
-              { text: "Exit", onPress: () => router.back() },
-            ])
-          }
-        >
-          <Ionicons name="chevron-back" size={24} color="#FFF" />
-        </Pressable>
-        <Text style={[styles.headerTitle, { color: themeColors.textPrimary }]}>
-          Assessment
-        </Text>
-        <Pressable
-          style={styles.iconButton}
-          onPress={() => setIsDarkMode(!isDarkMode)}
-        >
-          <Feather
-            name={isDarkMode ? "sun" : "moon"}
-            size={24}
-            color={themeColors.textPrimary}
-          />
-        </Pressable>
-      </View>
-
-      <View style={styles.fixedTopContainer}>
-        <View style={styles.progressContainer}>
-          <View
-            style={[
-              styles.progressBarTrack,
-              { backgroundColor: isDarkMode ? "#333" : "#E0E0E0" },
-            ]}
-          >
-            <View
-              style={[styles.progressBarFill, { width: `${progressPercent}%` }]}
-            />
-          </View>
-        </View>
-
-        <View style={styles.timerContainer}>
-          <View
-            style={[
-              styles.timerPill,
-              {
-                backgroundColor: themeColors.cardBg,
-                borderColor: themeColors.optionBorder,
-              },
-            ]}
-          >
-            <Ionicons
-              name="time-outline"
-              size={16}
-              color={timeLeft < 60 ? "red" : themeColors.textSecondary}
-            />
-            <Text
-              style={[
-                styles.timerText,
-                { color: timeLeft < 60 ? "red" : themeColors.textPrimary },
-              ]}
-            >
-              {formatTime(timeLeft)}
-            </Text>
-          </View>
-        </View>
-      </View>
-
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        <View
-          style={[
-            styles.questionCard,
-            {
-              backgroundColor: themeColors.questionCardBg,
-              borderColor: themeColors.questionCardBorder,
-            },
-          ]}
-        >
-          <Text style={[styles.questionCounter, { color: "#333" }]}>
-            Question {currentQuestionIndex + 1}
-          </Text>
-          <Text
-            style={[
-              styles.questionText,
-              { color: themeColors.questionCardText },
-            ]}
-          >
-            {currentQuestion.question}
-          </Text>
-        </View>
-
-        <View style={styles.optionsContainer}>
-          {currentQuestion.options.map((option, index) => {
-            const isSelected = selectedOptionIndex === index;
-            return (
-              <Pressable
-                key={index}
-                style={[
-                  styles.optionCard,
-                  {
-                    backgroundColor: isSelected
-                      ? themeColors.optionSelectedBg
-                      : themeColors.cardBg,
-                    borderColor: isSelected
-                      ? themeColors.optionSelectedBg
-                      : themeColors.optionBorder,
-                  },
-                ]}
-                onPress={() => setSelectedOptionIndex(index)}
-              >
-                <View
-                  style={[
-                    styles.radioCircle,
-                    {
-                      borderColor: isSelected
-                        ? "#FFF"
-                        : themeColors.textSecondary,
-                    },
-                  ]}
-                >
-                  {isSelected && <View style={styles.radioFill} />}
-                </View>
-                <Text
-                  style={[
-                    styles.optionText,
-                    { color: isSelected ? "#FFF" : themeColors.textPrimary },
-                  ]}
-                >
-                  {option}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </View>
-      </ScrollView>
-
-      <View
-        style={[styles.footer, { backgroundColor: themeColors.background }]}
-      >
-        <Pressable
-          style={[
-            styles.primaryButton,
-            selectedOptionIndex === null && styles.disabledButton,
-          ]}
-          onPress={handleNext}
-          disabled={selectedOptionIndex === null}
-        >
-          <Text style={styles.primaryButtonText}>
-            {currentQuestionIndex === QUIZ_DATA.length - 1
-              ? "Submit Assessment"
-              : "Next Question"}
-          </Text>
-          <Ionicons name="arrow-forward" size={20} color="#FFF" />
-        </Pressable>
-      </View>
-    </SafeAreaView>
+    <QuizScreen
+      QUIZ_DATA_LENGTH={QUIZ_DATA.length}
+      currentQuestionIndex={currentQuestionIndex}
+      currentQuestion={currentQuestion}
+      selectedOptionIndex={selectedOptionIndex}
+      progressPercent={progressPercent}
+      isSubjectStart={isSubjectStart}
+      timeLeft={timeLeft}
+      isDarkMode={isDarkMode}
+      themeColors={themeColors}
+      formatTime={formatTime}
+      handleNext={handleNext}
+      setSelectedOptionIndex={setSelectedOptionIndex}
+      setIsDarkMode={setIsDarkMode}
+      routerBack={routerBack}
+    />
   );
 }
-
-// --- STYLES ---
-const startStyles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#FFFFFF",
-    justifyContent: "center",
-    alignItems: "center",
-    paddingHorizontal: 30,
-    paddingVertical: 40,
-  },
-  title: {
-    fontFamily: Fonts.lexendDecaMedium,
-    fontSize: 26,
-    color: "#4CAF50",
-    textAlign: "center",
-    lineHeight: 34,
-    marginBottom: 30,
-  },
-  illustrationContainer: {
-    marginBottom: 30,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  subtitle: {
-    fontFamily: Fonts.lexendDecaMedium,
-    fontSize: 22,
-    color: "#6E3D84",
-    marginBottom: 12,
-    textAlign: "center",
-  },
-  description: {
-    fontFamily: Fonts.lexendDecaRegular,
-    marginHorizontal: 10,
-    fontSize: 15,
-    color: "#333333",
-    textAlign: "center",
-    marginBottom: 50,
-    lineHeight: 22,
-  },
-  button: {
-    backgroundColor: "#6E3D84",
-    paddingVertical: 16,
-    width: "100%",
-    borderRadius: 30,
-    alignItems: "center",
-    shadowColor: "#6E3D84",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
-    elevation: 6,
-  },
-  buttonText: {
-    fontFamily: Fonts.poppinsMedium,
-    color: "#FFFFFF",
-    fontSize: 16,
-    letterSpacing: 1,
-  },
-});
-
-const styles = StyleSheet.create({
-  container: { flex: 1 },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: "#381E72",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  iconButton: { padding: 8 },
-  headerTitle: { fontFamily: Fonts.poppinsMedium, fontSize: 18 },
-  fixedTopContainer: { paddingBottom: 10 },
-  progressContainer: {
-    paddingHorizontal: 24,
-    paddingTop: 10,
-    paddingBottom: 10,
-  },
-  progressBarTrack: { height: 8, borderRadius: 4, overflow: "hidden" },
-  progressBarFill: {
-    height: "100%",
-    backgroundColor: "#381E72",
-    borderRadius: 4,
-  },
-  timerContainer: { alignItems: "center", marginBottom: 5 },
-  timerPill: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 6,
-    paddingHorizontal: 16,
-    borderRadius: 20,
-    borderWidth: 1,
-    gap: 6,
-  },
-  timerText: { fontFamily: Fonts.poppinsMedium, fontSize: 14 },
-  scrollContent: { paddingHorizontal: 24, paddingBottom: 120 },
-  questionCard: {
-    borderRadius: 12,
-    padding: 25,
-    marginBottom: 30,
-    borderWidth: 1,
-    minHeight: 180,
-    justifyContent: "center",
-    alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  questionCounter: {
-    position: "absolute",
-    top: 16,
-    left: 20,
-    fontFamily: Fonts.regular,
-    fontSize: 12,
-    opacity: 0.7,
-  },
-  questionText: {
-    fontFamily: Fonts.poppinsMedium,
-    fontSize: 18,
-    lineHeight: 28,
-    textAlign: "center",
-    marginTop: 10,
-  },
-  optionsContainer: { gap: 12 },
-  optionCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 16,
-    borderRadius: 12,
-    borderWidth: 1,
-    gap: 12,
-  },
-  optionText: { fontFamily: Fonts.regular, fontSize: 16, flex: 1 },
-  radioCircle: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    borderWidth: 2,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  radioFill: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: "#FFF",
-  },
-  footer: { padding: 24, position: "absolute", bottom: 0, left: 0, right: 0 },
-  primaryButton: {
-    backgroundColor: "#381E72",
-    paddingVertical: 16,
-    borderRadius: 30,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    shadowColor: "#381E72",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  disabledButton: {
-    backgroundColor: "#B0B0B0",
-    shadowOpacity: 0,
-    elevation: 0,
-  },
-  primaryButtonText: {
-    color: "#FFF",
-    fontFamily: Fonts.poppinsMedium,
-    fontSize: 16,
-  },
-
-  // --- RESULT STYLES ---
-  resultContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 30,
-  },
-  resultTitleText: { fontFamily: Fonts.poppinsMedium, fontSize: 32, marginBottom: 24 },
-  smileyContainer: { marginBottom: 20 },
-  starsRow: {
-    flexDirection: "row",
-    alignItems: "flex-end",
-    justifyContent: "center",
-    marginBottom: 20,
-  },
-  starSide: { marginBottom: 5 },
-  starCenter: { marginHorizontal: 8, marginBottom: 10 },
-  mockText: {
-    fontFamily: Fonts.poppinsMedium,
-    fontSize: 16,
-    color: "#000",
-    marginTop: 10,
-  },
-  passedText: { fontFamily: Fonts.poppinsMedium, fontSize: 22, marginVertical: 8 },
-  scoreDescription: {
-    fontFamily: Fonts.lexendDecaRegular,
-    fontSize: 14,
-    color: "#666",
-    textAlign: "center",
-    marginBottom: 40,
-  },
-  reviewButton: {
-    backgroundColor: "#6E3D84",
-    paddingVertical: 16,
-    paddingHorizontal: 40,
-    borderRadius: 30,
-    shadowColor: "#6E3D84",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
-    elevation: 5,
-  },
-  reviewButtonText: { color: "#FFF", fontFamily: Fonts.poppinsMedium, fontSize: 16 },
-
-  // --- REVIEW SCREEN STYLES ---
-  reviewHeader: {
-    flexDirection: "column",
-    alignItems: "flex-start",
-    paddingTop: 20,
-    paddingBottom: 10,
-    paddingHorizontal: 20,
-    backgroundColor: "#FFF",
-  },
-  reviewBackButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 15,
-  },
-  reviewBackText: {
-    color: "#381E72",
-    fontFamily: Fonts.poppinsMedium,
-    fontSize: 16,
-    marginLeft: 8,
-  },
-  reviewTitleContainer: {
-    width: "100%",
-    alignItems: "center",
-  },
-  reviewHeaderTitle: {
-    fontFamily: Fonts.poppinsMedium,
-    fontSize: 13,
-    color: "#000",
-    marginBottom: 4,
-    textAlign: "center",
-  },
-  reviewHeaderSubtitle: {
-    fontFamily: Fonts.lexendDecaRegular,
-    fontSize: 12,
-    color: "#666",
-    textAlign: "center",
-  },
-  reviewScrollContent: {
-    padding: 20,
-    paddingBottom: 50,
-  },
-  reviewQuestionContainer: {
-    marginBottom: 30,
-  },
-  reviewQuestionLabelContainer: {
-    alignSelf: "flex-start",
-    marginBottom: 10,
-  },
-  reviewQuestionLabel: {
-    fontFamily: Fonts.regular,
-    fontSize: 13,
-    color: "#7C7255",
-  },
-  reviewUnderline: {
-    height: 1,
-    backgroundColor: "#C5A900",
-    width: "100%",
-    marginTop: 2,
-  },
-  reviewQuestionText: {
-    fontFamily: Fonts.poppinsMedium,
-    fontSize: 15,
-    color: "#423815",
-    lineHeight: 22,
-    marginBottom: 15,
-  },
-  reviewAnswerRow: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 10,
-    marginBottom: 8,
-  },
-  reviewAnswerText: {
-    fontFamily: Fonts.poppinsMedium,
-    fontSize: 14,
-    flex: 1,
-    lineHeight: 20,
-    marginTop: 2,
-  },
-});

@@ -5,6 +5,7 @@ import { ThemedView } from '@/components/themed-view';
 import { api } from '../../lib/api';
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { Colors, Fonts } from '../../constants/cognify-theme';
+import { useFonts } from "expo-font";
 
 interface Module {
   id: string;
