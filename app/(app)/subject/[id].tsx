@@ -1,5 +1,8 @@
 // SubjectModulesScreen.tsx
 
+import { Colors, Fonts } from "@/constants/cognify-theme";
+import { getSubjectTopics } from "@/lib/api"; // Assuming api.ts is at /api
+import { ModuleListItem, Topic } from "@/lib/types"; // Import new types
 import { FontAwesome, Ionicons } from "@expo/vector-icons";
 import {
   router,
@@ -20,9 +23,6 @@ import {
   Text,
   View,
 } from "react-native";
-import { Colors, Fonts } from "@/constants/cognify-theme";
-import { getSubjectTopics } from "@/lib/api"; // Assuming api.ts is at /api
-import { ModuleListItem, Topic } from "@/lib/types"; // Import new types
 
 // --- GLOBAL STORAGE HACK FOR DEMO ---
 if (!(global as any).MODULE_PROGRESS) {
@@ -80,12 +80,55 @@ export default function SubjectModulesScreen() {
         };
       });
 
-      setModules(fetchedTopics);
+      const contentfulTopics = fetchedTopics.filter(m => !!m.lectureContentUrl);
+
+      if (contentfulTopics.length === 0) {
+        const baseTitle = subjectTitle || 'Subject';
+        const mock: ModuleListItem[] = [
+          {
+            id: `mock-${id}-1`,
+            title: `Introduction to ${baseTitle}`,
+            author: 'Cognify Content',
+            progress: 0,
+            quizTaken: false,
+            lectureContentUrl: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf',
+          },
+          {
+            id: `mock-${id}-2`,
+            title: `${baseTitle}: Core Concepts`,
+            author: 'Cognify Content',
+            progress: 0,
+            quizTaken: false,
+            lectureContentUrl: 'https://www.clickdimensions.com/links/TestPDFfile.pdf',
+          },
+        ];
+        setModules(mock);
+      } else {
+        setModules(contentfulTopics);
+      }
 
     } catch (error) {
       console.error("Failed to fetch subject topics:", error);
-      // Handle error display to the user if needed
-      setModules([]);
+      const baseTitle = subjectTitle || 'Subject';
+      const mock: ModuleListItem[] = [
+        {
+          id: `mock-${id}-1`,
+          title: `Introduction to ${baseTitle}`,
+          author: 'Cognify Content',
+          progress: 0,
+          quizTaken: false,
+          lectureContentUrl: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf',
+        },
+        {
+          id: `mock-${id}-2`,
+          title: `${baseTitle}: Core Concepts`,
+          author: 'Cognify Content',
+          progress: 0,
+          quizTaken: false,
+          lectureContentUrl: 'https://www.clickdimensions.com/links/TestPDFfile.pdf',
+        },
+      ];
+      setModules(mock);
     } finally {
       setLoading(false);
     }

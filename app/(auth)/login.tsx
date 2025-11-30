@@ -60,9 +60,6 @@ export default function LoginScreen() {
     setIsLoading(true);
     try {
       await login(email, password);
-      
-      // <--- 3. SUCCESS! Redirect to Onboarding Step 1
-      router.replace('/onboarding/step1'); 
 
     } catch (e: any) {
       console.log("Login Error:", e.response?.status, e.response?.data);

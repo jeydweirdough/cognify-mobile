@@ -4,6 +4,8 @@ import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import React from "react";
 import {
+  DevSettings,
+  Platform,
   Pressable,
   SafeAreaView,
   ScrollView,
@@ -42,7 +44,14 @@ export const AssessmentReviewScreen: React.FC<AssessmentReviewScreenProps> = ({
         {/* Back To Home Button (Arrow + Text) */}
         <Pressable
           style={styles.reviewBackButton}
-          onPress={() => router.push("/")} // Navigate to Home
+          onPress={() => {
+            router.push("/");
+            if (Platform.OS === "web") {
+              window.location.href = "/";
+            } else {
+              try { DevSettings.reload(); } catch {}
+            }
+          }}
         >
           <Ionicons name="arrow-back" size={20} color="#381E72" />
           <Text style={styles.reviewBackText}>Back to Home</Text>

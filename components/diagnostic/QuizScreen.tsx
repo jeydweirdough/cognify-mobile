@@ -5,8 +5,8 @@ import React from "react";
 import {
   Alert,
   Pressable,
-  ScrollView,
   SafeAreaView,
+  ScrollView,
   StatusBar,
   StyleSheet,
   Text,
@@ -38,7 +38,7 @@ interface ThemeColors {
 interface QuizScreenProps {
   QUIZ_DATA_LENGTH: number;
   currentQuestionIndex: number;
-  currentQuestion: QuestionData;
+  currentQuestion?: QuestionData;
   selectedOptionIndex: number | null;
   progressPercent: number;
   isSubjectStart: boolean;
@@ -148,7 +148,7 @@ export const QuizScreen: React.FC<QuizScreenProps> = ({
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {/* Subject Card (Conditional Display) */}
-        {isSubjectStart && (
+        {isSubjectStart && currentQuestion?.subject && (
           <View
             style={[
               styles.subjectCard,
@@ -158,7 +158,7 @@ export const QuizScreen: React.FC<QuizScreenProps> = ({
             ]}
           >
             <Text style={styles.subjectCardText}>
-              {currentQuestion.subject}
+              {currentQuestion?.subject}
             </Text>
           </View>
         )}
@@ -181,12 +181,12 @@ export const QuizScreen: React.FC<QuizScreenProps> = ({
               { color: themeColors.questionCardText },
             ]}
           >
-            {currentQuestion.question}
+            {currentQuestion?.question ?? ""}
           </Text>
         </View>
 
         <View style={styles.optionsContainer}>
-          {currentQuestion.options.map((option, index) => {
+          {(currentQuestion?.options ?? []).map((option, index) => {
             const isSelected = selectedOptionIndex === index;
             return (
               <Pressable

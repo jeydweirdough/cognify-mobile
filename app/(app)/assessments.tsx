@@ -4,13 +4,15 @@ import { router } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
 import { Alert, Dimensions, SafeAreaView, StatusBar } from "react-native";
 // Assuming Fonts import is available from parent context/structure
-import { Fonts } from "../../constants/cognify-theme";
 
 // Import separated components
-import { AssessmentStartScreen } from "@/components/diagnostic/AssessmentStartScreen";
 import { AssessmentResultScreen } from "@/components/diagnostic/AssessmentResultScreen";
 import { AssessmentReviewScreen } from "@/components/diagnostic/AssessmentReviewScreen";
+import { AssessmentStartScreen } from "@/components/diagnostic/AssessmentStartScreen";
 import { QuizScreen } from "@/components/diagnostic/QuizScreen";
+import { useAuth } from "@/lib/auth";
+import { getDiagnosticAssessmentQuestions, getDiagnosticRecommendations, getSubjectTopics, hasTakenDiagnostic, setDiagnosticStatus, submitDiagnosticSubmission } from "../../lib/api";
+import { storage } from "../../lib/storage";
 
 const { width } = Dimensions.get("window");
 const INITIAL_TIME_SECONDS = 1200; // 20 minutes for 20 questions
@@ -23,6 +25,8 @@ interface SubjectScore {
 }
 // -------------------------------------------------------------------------
 
+let LAST_DIAGNOSTIC_SUBJECT_SCORES: SubjectScore[] = [];
+
 interface QuestionData {
   id: number;
   subject: string;
@@ -31,260 +35,28 @@ interface QuestionData {
   correctIndex: number;
 }
 
-// --- UPDATED DATA: 4 SUBJECTS, 20 ITEMS TOTAL (Existing Data) ---
-const QUIZ_DATA: QuestionData[] = [
-  // --- ABNORMAL PSYCHOLOGY (Q1 - Q5) ---
-  {
-    id: 1,
-    subject: "Abnormal Psychology",
-    question: "A substance is defined as any:",
-    options: [
-      "Over-the-counter prescription drug",
-      "Drug that has psychedelic effects",
-      "Product that could potentially create an addiction",
-      "Natural or synthesized product that has psychoactive effects",
-    ],
-    correctIndex: 3,
-  },
-  {
-    id: 2,
-    subject: "Abnormal Psychology",
-    question: "Identify the physiological effect of nicotine:",
-    options: [
-      "It resembles a fight-or-flight response",
-      "It reduces stress and anxiety",
-      "It suppresses several biochemicals including dopamine and norepinephrine",
-      "It reduces the craving to smoke more",
-    ],
-    correctIndex: 0,
-  },
-  {
-    id: 3,
-    subject: "Abnormal Psychology",
-    question:
-      "Korsakoff’s syndrome is caused by damage to ___________ and is classified as a(n) ___________:",
-    options: [
-      "Vertebrae; dementia",
-      "Adrenal glands; delirium",
-      "Carotid artery; medical disease",
-      "Thalamus; amnesic disorder",
-    ],
-    correctIndex: 3,
-  },
-  {
-    id: 4,
-    subject: "Abnormal Psychology",
-    question:
-      "The person diagnosed with Alzheimer’s disease at age 45 would be considered to have an:",
-    options: [
-      "Premature-onset type",
-      "Early-onset type",
-      "Late-onset type",
-      "Post-onset type",
-    ],
-    correctIndex: 1,
-  },
-  {
-    id: 5,
-    subject: "Abnormal Psychology",
-    question:
-      "Which of the following is the difference between “normal” memory lapses and dementia?",
-    options: [
-      "With normal memory lapses, the person is much older than someone with dementia",
-      "In dementia, the memory does not return spontaneously and may not respond to memory cues",
-      "With normal memory lapses, the person is probably entering the onset of dementia",
-      "In dementia, the memory loss is associated with psychological effects of stress",
-    ],
-    correctIndex: 1,
-  },
 
-  // --- INDUSTRIAL PSYCHOLOGY (Q6 - Q10) ---
-  {
-    id: 6,
-    subject: "Industrial Psychology",
-    question: "Which term refers to the consistency of measurement across time?",
-    options: ["Reliability", "Validity", "Accuracy", "Predictability"],
-    correctIndex: 0,
-  },
-  {
-    id: 7,
-    subject: "Industrial Psychology",
-    question:
-      "The process of verifying that there is a performance deficiency and determining if such deficiency should be corrected through training or through some other means is called:",
-    options: [
-      "Needs analysis",
-      "Task analysis",
-      "Performance analysis",
-      "Training strategy",
-      "Development planning",
-    ],
-    correctIndex: 0,
-  },
-  {
-    id: 8,
-    subject: "Industrial Psychology",
-    question:
-      "When an interview is used to predict future job performance on the basis of an applicant’s oral responses to oral inquiries, it is called a(n) _____ interview:",
-    options: ["Selection", "Appraisal", "Exit", "Preview", "Structured"],
-    correctIndex: 4,
-  },
-  {
-    id: 9,
-    subject: "Industrial Psychology",
-    question:
-      "According to Herzberg, ________ needs produce job satisfaction, and ________ needs produce job dissatisfaction:",
-    options: [
-      "Motivator; hygiene",
-      "Hygiene; motivator",
-      "External; internal",
-      "Satisfier; motivator",
-    ],
-    correctIndex: 0,
-  },
-  {
-    id: 10,
-    subject: "Industrial Psychology",
-    question:
-      "The psychological and physical reaction to certain events or situations is called:",
-    options: ["Stress", "Strain", "Stressors", "Eustress"],
-    correctIndex: 0,
-  },
-
-  // --- PSYCHOLOGICAL ASSESSMENT (Q11 - Q15) ---
-  {
-    id: 11,
-    subject: "Psychological Assessment",
-    question:
-      "A Pearson r correlation coefficient describes the ______ and the ______ of a linear relationship between two interval scale or ratio scale variables:",
-    options: [
-      "Level; amount",
-      "Similarity; importance",
-      "Direction; strength",
-      "Variability; significance",
-    ],
-    correctIndex: 2,
-  },
-  {
-    id: 12,
-    subject: "Psychological Assessment",
-    question: "The term class intervals is best associated with:",
-    options: [
-      "A socioeconomic status of a sample of test takers",
-      "A frequency distribution of test taker scores",
-      "A grouped frequency distribution of test taker scores",
-      "Measures of central tendency",
-    ],
-    correctIndex: 2,
-  },
-  {
-    id: 13,
-    subject: "Psychological Assessment",
-    question:
-      "Credit for devising the first successful psychological testing in the modern era is usually given to:",
-    options: [
-      "Francis Galton",
-      "Alfred Binet",
-      "Wilhelm Wundt",
-      "James McKeen Cattell",
-    ],
-    correctIndex: 1,
-  },
-  {
-    id: 14,
-    subject: "Psychological Assessment",
-    question: "He coined the term mental tests:",
-    options: [
-      "James McKeen Cattell",
-      "Raymond Cattell",
-      "Lewis Terman",
-      "Alfred Binet",
-    ],
-    correctIndex: 0,
-  },
-  {
-    id: 15,
-    subject: "Psychological Assessment",
-    question:
-      "Correction which expects an examinee’s degree of psychological defensiveness is perhaps the most sophisticated of the _____________ scale:",
-    options: ["Clinical", "Testing", "Reliability", "Validity"],
-    correctIndex: 3, // Changed from Clinical to Validity based on standard use of validity/defensiveness scales in personality tests
-  },
-
-  // --- THEORIES OF PERSONALITY (Q16 - Q20) ---
-  {
-    id: 16,
-    subject: "Theories of Personality",
-    question:
-      "Every time two-year-old Kati is given a bath, she plays with her genital area. If her parents punish her, she is likely to experience frustration. Which of the following can explain if said child becomes sexually preoccupied?",
-    options: ["Freud", "Skinner", "Bandura", "Erickson"],
-    correctIndex: 0,
-  },
-  {
-    id: 17,
-    subject: "Theories of Personality",
-    question:
-      "The actualizing tendency and self-concept are to _______ as reciprocal determination and self-efficacy are to ______:",
-    options: [
-      "Abraham Maslow; Hans Eysenck",
-      "Alfred Adler; Albert Bandura",
-      "Raymond Cattell; Carl Jung",
-      "Carl Rogers; Albert Bandura",
-    ],
-    correctIndex: 3,
-  },
-  {
-    id: 18,
-    subject: "Theories of Personality",
-    question:
-      "During the meeting, an employee just went along with the majority decision. This best reflects which of the following?",
-    options: ["Pakikitungo", "Hiya", "Pakikibagay", "Pakikisama"],
-    correctIndex: 3,
-  },
-  {
-    id: 19,
-    subject: "Theories of Personality",
-    question:
-      "__________ theory maximized and _________ theory minimized the role of the unconscious:",
-    options: [
-      "Trait; humanistic",
-      "Psychoanalytic; behaviorist",
-      "Psychoanalytic; humanistic",
-      "Trait; behaviorist",
-    ],
-    correctIndex: 1, // Changed from Psychoanalytic; humanistic to Psychoanalytic; behaviorist (Behaviorism minimizes unconscious the most)
-  },
-  {
-    id: 20,
-    subject: "Theories of Personality",
-    question:
-      "A psychiatrist who explains pathological behavior as a conflict between underlying psychological forces is using the ________ model:",
-    options: ["Psychoanalytical", "Behavioral", "Medical", "Humanistic"],
-    correctIndex: 0,
-  },
-];
 
 // --- UTILITY FUNCTION FOR SAVING RESULTS ---
 // NOTE: Assuming window.storage is a placeholder for AsyncStorage or similar
 const saveAssessmentResults = async (
+  storageKey: string,
   score: number,
   totalQuestions: number,
-  subjectScores: SubjectScore[]
+  subjectScores: SubjectScore[],
+  recommendedSubjects?: string[]
 ) => {
   try {
     const assessmentData = {
       score,
       totalQuestions,
       subjectScores,
+      recommendedSubjects,
       timestamp: new Date().toISOString(),
     };
 
-    // Replace with your actual storage mechanism (e.g., await AsyncStorage.setItem)
-    /*
-    await window.storage.set(
-      'diagnostic_assessment_results',
-      JSON.stringify(assessmentData)
-    );
-    */
+    await storage.setItem(storageKey, JSON.stringify(assessmentData));
+
     console.log("Assessment results saved successfully:", assessmentData);
   } catch (error) {
     console.error("Failed to save assessment results:", error);
@@ -304,10 +76,16 @@ export default function AssessmentsScreen() {
   const [isQuizFinished, setIsQuizFinished] = useState(false);
   const [isReviewing, setIsReviewing] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(false);
+  const [quizData, setQuizData] = useState<QuestionData[]>([]);
+
+  const [subjectScores, setSubjectScores] = useState<SubjectScore[]>([]);
+  const [recommendedSubjects, setRecommendedSubjects] = useState<string[]>([]);
+
+  const { user } = useAuth();
 
   // User Answers Storage
   const [userAnswers, setUserAnswers] = useState<(number | null)[]>(
-    new Array(QUIZ_DATA.length).fill(null)
+    new Array(quizData.length).fill(null)
   );
 
   // Timer State
@@ -327,11 +105,11 @@ export default function AssessmentsScreen() {
     questionCardBorder: "#4B3E62",
   };
 
-  const currentQuestion = QUIZ_DATA[currentQuestionIndex];
-  const progressPercent = ((currentQuestionIndex + 1) / QUIZ_DATA.length) * 100;
+  const currentQuestion = quizData[currentQuestionIndex];
+  const progressPercent = ((currentQuestionIndex + 1) / quizData.length) * 100;
   const isSubjectStart =
     currentQuestionIndex === 0 ||
-    currentQuestion.subject !== QUIZ_DATA[currentQuestionIndex - 1].subject;
+    currentQuestion.subject !== quizData[currentQuestionIndex - 1].subject;
 
   // --- TIMER LOGIC ---
   useEffect(() => {
@@ -358,7 +136,86 @@ export default function AssessmentsScreen() {
   };
 
   // --- HANDLERS ---
-  const handleStart = () => setIsQuizStarted(true);
+  const handleStart = async () => {
+    try {
+      const already = await hasTakenDiagnostic();
+      if (already) {
+        Alert.alert("Assessment already completed", "You can review your results with Cognify.");
+        router.back();
+        return;
+      }
+      const items: any[] = await getDiagnosticAssessmentQuestions();
+      const diagnostics = items.filter((a) => (a?.purpose ?? a?.type) === "Diagnostic");
+      const subjectIds = Array.from(new Set(diagnostics.map((a) => a?.subject_id).filter(Boolean)));
+      const subjectMap: Record<string, string> = {};
+      if (subjectIds.length) {
+        const results = await Promise.all(subjectIds.map((id) => getSubjectTopics(String(id)).then((s) => ({ id, title: s?.title ?? String(id) })).catch(() => ({ id, title: String(id) }))));
+        results.forEach(({ id, title }) => { subjectMap[id] = title; });
+      }
+      const questions: QuestionData[] = [];
+      diagnostics.forEach((ass, idxA) => {
+        const subj = ass?.subject_id ? (subjectMap[ass.subject_id] ?? String(ass.subject_id)) : (ass?.subject?.title ?? ass?.subject ?? "General");
+        const qs = Array.isArray(ass?.questions) ? ass.questions : [];
+        qs.forEach((q: any, idxQ: number) => {
+          const rawOpts = q?.options ?? q?.choices ?? q?.answers ?? q?.options_map ?? {};
+          const optsArr = Array.isArray(rawOpts)
+            ? rawOpts
+            : rawOpts && typeof rawOpts === "object"
+              ? Object.values(rawOpts)
+              : [];
+          const options = Array.isArray(optsArr)
+            ? optsArr.map((o: any) => String(o))
+            : [];
+
+          let ciRaw =
+            q?.correctIndex ??
+            q?.correct_index ??
+            q?.correctChoice ??
+            q?.correct_answer ??
+            q?.correct ??
+            q?.answer_index ??
+            q?.answer;
+          let ciNum: number = 0;
+          if (typeof ciRaw === "number") {
+            ciNum = Number(ciRaw);
+          } else if (typeof ciRaw === "string") {
+            const upper = ciRaw.trim().toUpperCase();
+            const letterMap: Record<string, number> = { A: 0, B: 1, C: 2, D: 3, E: 4 };
+            if (letterMap[upper] !== undefined) {
+              ciNum = letterMap[upper];
+            } else {
+              const idx = options.findIndex(
+                (o) => o.trim().toUpperCase() === upper || o.trim() === ciRaw.trim()
+              );
+              ciNum = idx >= 0 ? idx : 0;
+            }
+          } else {
+            ciNum = 0;
+          }
+
+          questions.push({
+            id: Number(q?.id ?? idxA * 1000 + idxQ + 1),
+            subject: String(q?.subject?.title ?? q?.subject ?? subj),
+            question: String(q?.question ?? q?.text ?? q?.prompt ?? ""),
+            options,
+            correctIndex: ciNum,
+          });
+        });
+      });
+      if (questions.length) {
+        setQuizData(questions);
+        setUserAnswers(new Array(questions.length).fill(null));
+        setCurrentQuestionIndex(0);
+        setSelectedOptionIndex(null);
+        setScore(0);
+        setIsQuizFinished(false);
+        setIsReviewing(false);
+        setTimeLeft(INITIAL_TIME_SECONDS);
+      }
+    } finally {
+      setIsQuizStarted(true);
+    }
+  };
   const handleReviewPress = () => setIsReviewing(true);
   const routerBack = () => router.back();
 
@@ -367,8 +224,38 @@ export default function AssessmentsScreen() {
     // 1. Calculate scores immediately before setting state to finished
     const subjectScores = calculateSubjectScores();
 
-    // 2. Save results using the current score and subjectScores
-    saveAssessmentResults(score, QUIZ_DATA.length, subjectScores);
+    // 2. Compute recommendations and save
+    const recommended = recommendWeakSubjects(subjectScores, 2);
+    const storageKey = user?.id ? `diagnostic_assessment_results:${user.id}` : 'diagnostic_assessment_results';
+    saveAssessmentResults(storageKey, score, quizData.length, subjectScores, recommended);
+    setDiagnosticStatus(true);
+
+    LAST_DIAGNOSTIC_SUBJECT_SCORES = subjectScores;
+    setSubjectScores(subjectScores);
+    setRecommendedSubjects(recommended);
+
+    try {
+      const answers = quizData.map((q, idx) => ({
+        question_id: q.id,
+        answer: userAnswers[idx] != null && q.options[userAnswers[idx] as number] != null ? q.options[userAnswers[idx] as number] : userAnswers[idx],
+        is_correct: userAnswers[idx] != null && userAnswers[idx] === q.correctIndex,
+      }));
+      const timeTaken = INITIAL_TIME_SECONDS - timeLeft;
+      const payload = {
+        user_id: user?.id,
+        assessment_id: 'diagnostic',
+        subject_id: 'diagnostic',
+        answers,
+        score,
+        total_items: quizData.length,
+        time_taken_seconds: timeTaken,
+      };
+      submitDiagnosticSubmission(payload).catch(() => {});
+      getDiagnosticRecommendations().then((data) => {
+        const rec = Array.isArray(data?.recommendedSubjects) ? data.recommendedSubjects : [];
+        if (rec.length) setRecommendedSubjects(rec.slice(0, 2));
+      }).catch(() => {});
+    } catch {}
 
     setIsQuizFinished(true);
     if (timerRef.current) clearInterval(timerRef.current);
@@ -389,7 +276,7 @@ export default function AssessmentsScreen() {
       setScore((prev) => prev + 1);
     }
 
-    if (currentQuestionIndex < QUIZ_DATA.length - 1) {
+    if (currentQuestionIndex < quizData.length - 1) {
       setCurrentQuestionIndex((prev) => prev + 1);
       setSelectedOptionIndex(null);
     } else {
@@ -399,7 +286,7 @@ export default function AssessmentsScreen() {
 
   // --- KNOWLEDGE MAPPING CALCULATION ---
   const calculateSubjectScores = (): SubjectScore[] => {
-    const subjectScoresMap = QUIZ_DATA.reduce((acc, question, index) => {
+    const subjectScoresMap = quizData.reduce((acc, question, index) => {
       const subject = question.subject;
       const isCorrect =
         userAnswers[index] !== null &&
@@ -419,6 +306,12 @@ export default function AssessmentsScreen() {
   };
   // ---------------------------------------------------
 
+  const recommendWeakSubjects = (scores: SubjectScore[], count = 2): string[] => {
+    const sorted = scores.slice().sort((a, b) => (a.correct / a.total) - (b.correct / b.total));
+    const n = Math.max(1, Math.min(count, sorted.length));
+    return sorted.slice(0, n).map((s) => s.subject);
+  };
+
   // --- RENDER: START SCREEN ---
   if (!isQuizStarted) {
     return (
@@ -432,20 +325,19 @@ export default function AssessmentsScreen() {
   // --- RENDER: REVIEW SCREEN ---
   if (isReviewing) {
     return (
-      <AssessmentReviewScreen QUIZ_DATA={QUIZ_DATA} userAnswers={userAnswers} />
+      <AssessmentReviewScreen QUIZ_DATA={quizData} userAnswers={userAnswers} />
     );
   }
 
   // --- RENDER: RESULT SCREEN (FIXED) ---
   if (isQuizFinished) {
-    const subjectScores = calculateSubjectScores(); // Calculate scores here to pass to result screen
-
     return (
       <AssessmentResultScreen
         score={score}
-        totalQuestions={QUIZ_DATA.length}
+        totalQuestions={quizData.length}
         onReviewPress={handleReviewPress}
-        // subjectScores={subjectScores} 
+        recommendedSubjects={recommendedSubjects}
+        subjectScores={subjectScores}
       />
     );
   }
@@ -453,7 +345,7 @@ export default function AssessmentsScreen() {
   // --- RENDER: QUIZ SCREEN ---
   return (
     <QuizScreen
-      QUIZ_DATA_LENGTH={QUIZ_DATA.length}
+      QUIZ_DATA_LENGTH={quizData.length}
       currentQuestionIndex={currentQuestionIndex}
       currentQuestion={currentQuestion}
       selectedOptionIndex={selectedOptionIndex}

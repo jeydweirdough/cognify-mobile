@@ -24,7 +24,7 @@ const Fonts = {
 const MOCK_READINESS_DATA = {
   title: "Readiness Level",
   subtitle: "Your current pass probability",
-  percentage: 39,
+  percentage: 0,
 };
 
 
@@ -60,8 +60,9 @@ export default function ProgressScreen() {
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {/* <MotivationCard /> */}
         <ReadinessCard data={MOCK_READINESS_DATA} />
-        <AchievementsCard />
         <ProgressOverviewCard />
+        <AchievementsCard />
+
       </ScrollView>
     </SafeAreaView>
   );

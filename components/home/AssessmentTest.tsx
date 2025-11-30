@@ -1,71 +1,63 @@
-import React from "react";
-import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
-import { useRouter } from "expo-router";
-import { FONT_FAMILY, PRIMARY_COLOR } from "@/constants/cognify-theme";
+import { hasTakenDiagnostic } from "@/lib/api";
+import { useAuth } from "@/lib/auth";
+import { storage } from "@/lib/storage";
+import React, { useEffect, useState } from "react";
+import { ActivityIndicator, StyleSheet, View } from "react-native";
+import ReadyAssessmentCard from "./ReadyAssessmentCard";
+import ReviewCognifyCard from "./ReviewCognifyCard";
 
 export default function AssessmentTest() {
-  const router = useRouter();
+  const [hasTaken, setHasTaken] = useState<boolean | null>(null); // null = unknown
+  const { user, initialized, token } = useAuth() as any;
 
-  return (
-    <View style={styles.assessmentSection}>
-      <Text style={styles.assessmentTitle}>Ready to ace your exam?</Text>
-      <Text style={styles.assessmentSubtitle}>
-        Help us personalize your review! Take a short test
-      </Text>
+  useEffect(() => {
+    if (!initialized) return;
 
-      <TouchableOpacity
-        style={styles.assessmentButton}
-        activeOpacity={0.8}
-        onPress={() => router.push("/assessments")}
-      >
-        <Text style={styles.assessmentButtonText}>Start Assessment Test</Text>
-      </TouchableOpacity>
-    </View>
-  );
+    const checkTaken = async () => {
+      try {
+        if (token) {
+          const flag = await hasTakenDiagnostic();
+          if (flag) {
+            setHasTaken(true);
+            return;
+          }
+        }
+        const key = user?.id
+          ? `diagnostic_assessment_results:${user.id}`
+          : "diagnostic_assessment_results";
+        const raw = await storage.getItem(key);
+        setHasTaken(!!raw);
+      } catch {
+        const key = user?.id
+          ? `diagnostic_assessment_results:${user.id}`
+          : "diagnostic_assessment_results";
+        const raw = await storage.getItem(key);
+        setHasTaken(!!raw);
+      }
+    };
+
+    checkTaken();
+  }, [initialized, user?.id, token]);
+
+  // Render loader while we don't know yet
+  if (!initialized || hasTaken === null) {
+    return (
+      <View style={styles.loaderSection}>
+        <View style={{ alignItems: "center", paddingVertical: 6 }}>
+          <ActivityIndicator color="#FFF" />
+        </View>
+      </View>
+    );
+  }
+
+  // Once known, render proper card
+  return hasTaken ? <ReviewCognifyCard /> : <ReadyAssessmentCard />;
 }
 
 const styles = StyleSheet.create({
-  assessmentSection: {
-    backgroundColor: PRIMARY_COLOR,
+  loaderSection: {
     borderRadius: 16,
     padding: 20,
     marginTop: 24,
-    shadowColor: PRIMARY_COLOR,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 5,
-    elevation: 8,
-  },
-  assessmentTitle: {
-    fontFamily: FONT_FAMILY,
-    fontSize: 18,
-    fontWeight: "700",
-    color: "#FFF",
-    marginBottom: 8,
-  },
-  assessmentSubtitle: {
-    fontFamily: FONT_FAMILY,
-    fontSize: 13,
-    color: "rgba(255,255,255,0.85)",
-    marginBottom: 18,
-    lineHeight: 18,
-  },
-  assessmentButton: {
-    backgroundColor: "#FFF",
-    paddingVertical: 14,
-    borderRadius: 12,
-    alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 3,
-  },
-  assessmentButtonText: {
-    fontFamily: FONT_FAMILY,
-    color: PRIMARY_COLOR,
-    fontSize: 14,
-    fontWeight: "700",
-    letterSpacing: 0.5,
   },
 });

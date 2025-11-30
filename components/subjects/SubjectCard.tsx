@@ -1,16 +1,16 @@
 // SubjectCard.tsx
 
+import { Fonts } from "@/constants/cognify-theme";
+import { router } from "expo-router";
 import React from "react";
 import {
-  View,
-  Text,
-  Pressable,
   Image,
-  StyleSheet,
   Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
 } from "react-native";
-import { router } from "expo-router";
-import { Fonts } from "@/constants/cognify-theme";
 
 // Images for subjects
 const images: Record<string, any> = {

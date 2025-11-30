@@ -1,8 +1,9 @@
 import { Feather } from "@expo/vector-icons";
-import React from "react";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import Svg, { Circle } from "react-native-svg";
-import { router } from "expo-router"; // Import router for navigation
+import { router } from "expo-router";
+import React, { useEffect, useMemo, useState } from "react";
+import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { useAuth } from "@/lib/auth";
+import { getStudentReportAnalytics, listSubjects } from "@/lib/api";
 
 const Colors = {
     text: "#333333",
@@ -31,59 +32,16 @@ interface SubjectData {
     color: string; 
 }
 
-const MOCK_SUBJECT_DATA: SubjectData[] = [
-    { id: 'p1', title: "Psychological Assessment", percentage: 92, status: "Strong", color: "#34D399" }, 
-    { id: 'p2', title: "Development Psychology", percentage: 38, status: "Weak", color: "#F97316" },
-    { id: 'p3', title: "Abnormal Psychology", percentage: 55, status: "Needs Improvement", color: "#EC4899" }, 
-    { id: 'p4', title: "Development Psychology", percentage: 68, status: "Developing", color: "#F97316" }, 
-];
+const COLORS = ["#34D399", "#F97316", "#EC4899", "#3498DB", "#6A2A94", "#22C55E", "#EAB308", "#3B82F6"];
 
-interface CircularProgressProps {
-    percentage: number;
-    color: string;
-    radius?: number;
-    strokeWidth?: number;
+function mapStatusToTag(status?: string): StatusKey {
+    const s = (status || "").toLowerCase();
+    if (s.includes("good")) return "Strong";
+    if (s.includes("needs review") || s.includes("improvement")) return "Needs Improvement";
+    return "Developing";
 }
 
-const CircularProgress: React.FC<CircularProgressProps> = ({ percentage, color, radius = 24, strokeWidth = 4 }) => {
-    const circumference = 2 * Math.PI * radius;
-    const progress = (100 - percentage) / 100 * circumference;
-
-    return (
-        <View style={{ width: radius * 2, height: radius * 2, marginRight: 15 }}>
-            <Svg height={radius * 2} width={radius * 2} viewBox={`0 0 ${radius * 2} ${radius * 2}`}>
-                <Circle
-                    stroke="#E5E7EB" 
-                    fill="none"
-                    cx={radius}
-                    cy={radius}
-                    r={radius - strokeWidth / 2}
-                    strokeWidth={strokeWidth}
-                />
-                {/* Progress circle */}
-                <Circle
-                    stroke={color}
-                    fill="none"
-                    cx={radius}
-                    cy={radius}
-                    r={radius - strokeWidth / 2}
-                    strokeWidth={strokeWidth}
-                    strokeDasharray={circumference}
-                    strokeDashoffset={progress}
-                    strokeLinecap="round"
-                    // Rotate to start at the top
-                    transform={`rotate(-90, ${radius}, ${radius})`}
-                />
-            </Svg>
-            <View style={overviewStyles.progressTextContainer}>
-                <Text style={[overviewStyles.progressText, { color: Colors.text }]}>
-                    {percentage}
-                    {percentage !== 55 ? "%" : ""} 
-                </Text>
-            </View>
-        </View>
-    );
-};
+// cards layout replaces circular progress
 
 // --- SUBJECT ITEM COMPONENT (UPDATED) ---
 
@@ -102,20 +60,17 @@ const SubjectItem: React.FC<SubjectItemProps> = ({ data }) => {
 };
 
     return (
-        <TouchableOpacity style={overviewStyles.itemContainer} onPress={handlePress}>
-            
-            <CircularProgress percentage={data.percentage} color={data.color} />
-
-            <View style={overviewStyles.textColumn}>
-                <Text style={overviewStyles.subjectTitle}>{data.title}</Text>
-                <View style={[overviewStyles.tag, { backgroundColor: statusData.bgColor }]}>
-                    <Text style={[overviewStyles.tagText, { color: statusData.textColor }]}>
-                        {statusData.text}
-                    </Text>
+        <TouchableOpacity style={[overviewStyles.metricCard, { backgroundColor: `${data.color}33` }]} onPress={handlePress}>
+            <View style={overviewStyles.metricHeader}>
+                <Text style={overviewStyles.metricTitle}>{data.title}</Text>
+                <View style={overviewStyles.iconCircle}>
+                    <Feather name="arrow-up-right" size={16} color={data.color} />
                 </View>
             </View>
-
-            <Feather name="chevron-right" size={24} color="#A0A0A0" />
+            <Text style={[overviewStyles.metricValue, { color: Colors.text }]}>{Math.round(data.percentage)}%</Text>
+            <View style={[overviewStyles.statusPill, { backgroundColor: statusData.bgColor }]}> 
+                <Text style={[overviewStyles.statusText, { color: statusData.textColor }]}>{statusData.text}</Text>
+            </View>
         </TouchableOpacity>
     );
 };
@@ -123,18 +78,85 @@ const SubjectItem: React.FC<SubjectItemProps> = ({ data }) => {
 // --- MAIN COMPONENT ---
 
 export const ProgressOverviewCard: React.FC = () => {
-    return (
-        <View style={overviewStyles.container}>
-            <Text style={overviewStyles.mainTitle}>Progress Overview:</Text>
+    const { user } = useAuth();
+    const [loading, setLoading] = useState<boolean>(true);
+    const [subjects, setSubjects] = useState<SubjectData[]>([]);
+    const [error, setError] = useState<string | null>(null);
 
-            <View style={overviewStyles.card}>
-                {MOCK_SUBJECT_DATA.map((subject, index) => (
-                    <SubjectItem 
-                        key={subject.id} 
-                        data={subject} 
-                    />
+    useEffect(() => {
+        let mounted = true;
+        const fetchAnalytics = async () => {
+            if (!user?.id) {
+                setLoading(false);
+                return;
+            }
+            try {
+                const [subjectsRes, analyticsRes] = await Promise.all([
+                    listSubjects(),
+                    getStudentReportAnalytics(user.id),
+                ]);
+                const data = analyticsRes?.data || analyticsRes;
+                const subjectPerf = (data?.subject_performance || []) as any[];
+                const perfById: Record<string, any> = {};
+                subjectPerf.forEach((sp) => { perfById[String(sp.subject_id)] = sp; });
+
+                const items: SubjectData[] = (subjectsRes || []).map((s: any, idx: number) => {
+                    const id = String(s.id || s.subject_id || s._id || s.uid || "");
+                    const title = String(s.title || s.subject_title || s.name || "Untitled Subject");
+                    const perf = id ? perfById[id] : null;
+                    const percentage = perf ? Number(perf.average_score) || 0 : 0;
+                    const status = perf ? mapStatusToTag(perf.status) : "Developing";
+                    return {
+                        id,
+                        title,
+                        percentage,
+                        status,
+                        color: COLORS[idx % COLORS.length],
+                    };
+                });
+                if (mounted) setSubjects(items);
+            } catch (e: any) {
+                const msg = e?.response?.data?.detail || e?.message || "Failed to load analytics";
+                if (mounted) setError(msg);
+            } finally {
+                if (mounted) setLoading(false);
+            }
+        };
+        fetchAnalytics();
+        return () => { mounted = false; };
+    }, [user?.id]);
+
+    const content = useMemo(() => {
+        if (loading) {
+            return (
+                <View style={{ paddingVertical: 16 }}>
+                    <ActivityIndicator color={Colors.primary} />
+                </View>
+            );
+        }
+        if (error) {
+            return (
+                <Text style={{ color: "#E74C3C", paddingLeft: 4 }}>{error}</Text>
+            );
+        }
+        if (!subjects.length) {
+            return (
+                <Text style={{ color: Colors.text, opacity: 0.7, paddingLeft: 4 }}>No subject analytics available yet.</Text>
+            );
+        }
+        return (
+            <View style={overviewStyles.gridList}>
+                {subjects.map((subject) => (
+                    <SubjectItem key={subject.id} data={subject} />
                 ))}
             </View>
+        );
+    }, [loading, error, subjects]);
+
+    return (
+        <View style={overviewStyles.container}>
+            <Text style={overviewStyles.mainTitle}>Learning Pathway Status</Text>
+            {content}
         </View>
     );
 };
@@ -143,7 +165,8 @@ export const ProgressOverviewCard: React.FC = () => {
 
 const overviewStyles = StyleSheet.create({
     container: {
-        marginBottom: 30,
+        marginBottom: 20,
+        marginTop:10
     },
     mainTitle: {
         fontFamily: Fonts.regular,
@@ -152,53 +175,56 @@ const overviewStyles = StyleSheet.create({
         marginBottom: 10,
         paddingLeft: 4, 
     },
-    card: {
-        backgroundColor: Colors.background, // Use white/light background for the list card
-        paddingHorizontal: 16,
-        paddingVertical: 8,
-        borderRadius: 16,
-        borderWidth: 1,
-        borderColor: '#838383', // Very light border
+    gridList: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        justifyContent: 'space-between',
+        paddingHorizontal: 4,
     },
-    itemContainer: {
+    metricCard: {
+        width: '49%',
+        height: 140,
+        borderRadius: 16,
+        padding: 14,
+        marginBottom: 12,
+        borderWidth: 0.5,
+        borderColor: '#c9c9caff',
+        justifyContent: 'space-between',
+    },
+    metricHeader: {
         flexDirection: 'row',
         alignItems: 'center',
-        paddingVertical: 12,
-        borderBottomWidth: StyleSheet.hairlineWidth,
-        borderColor: '#d2cacaff',
+        justifyContent: 'space-between',
     },
-    textColumn: {
-        flex: 1,
-        marginRight: 10,
-    },
-    subjectTitle: {
+    metricTitle: {
         fontFamily: Fonts.regular,
-        fontSize: 16,
+        fontSize: 12,
         color: Colors.text,
+        opacity: 0.8,
     },
-    tag: {
-        alignSelf: 'flex-start',
-        borderRadius: 4,
-        paddingHorizontal: 8,
-        paddingVertical: 3,
-        marginTop: 4,
-    },
-    tagText: {
-        fontSize: 12,
-        fontFamily: Fonts.regular,
-    },
-    progressTextContainer: {
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        justifyContent: 'center',
+    iconCircle: {
+        width: 26,
+        height: 26,
+        borderRadius: 13,
+        backgroundColor: '#ffffff',
         alignItems: 'center',
+        justifyContent: 'center',
+        borderWidth: 1,
+        borderColor: '#e5e7eb',
     },
-    progressText: {
-        fontSize: 12,
+    metricValue: {
         fontFamily: Fonts.regular,
-        // The color is set dynamically based on Colors.text
+        fontSize: 28,
+        letterSpacing: 0.5,
+    },
+    statusPill: {
+        alignSelf: 'flex-start',
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 10,
+    },
+    statusText: {
+        fontFamily: Fonts.regular,
+        fontSize: 11,
     }
 });

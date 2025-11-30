@@ -38,7 +38,9 @@ export default function DailyPractice() {
     <View style={styles.section}>
       <View style={styles.sectionHeader}>
         <Text style={styles.sectionTitle}>Daily Practice</Text>
-        <Text style={styles.dayCounter}>Day {dayCounter}</Text>
+        <Text style={styles.dayCounter}>
+          Day {dayCounter} <Text style={{ fontStyle: "italic" }}>Future RPm</Text>
+        </Text>
       </View>
 
       <View style={styles.practiceGrid}>
@@ -98,7 +100,9 @@ const styles = StyleSheet.create({
   practiceGrid: {
     flexDirection: "row",
     justifyContent: "space-between",
-    backgroundColor: "#FFF",
+    backgroundColor: "#f9f9f9ff",
+    borderWidth: 0.4,
+    borderColor: "#E0E0E0",
     padding: 12,
     borderRadius: 16,
     shadowColor: "#000",

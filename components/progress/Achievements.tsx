@@ -5,7 +5,7 @@ import { Feather } from "@expo/vector-icons";
 const Colors = {
   text: "#000", 
   cardBg: "#F4FFCC",
-  border: "#838383", // subtle border
+  border: "#afaeaeff", // subtle border
 };
 
 const Fonts = {
@@ -20,9 +20,9 @@ type Achievement = {
 };
 
 const MOCK_ACHIEVEMENTS: Achievement[] = [
-  { id: "streak", iconName: "zap", value: "7", label: "Days Streak" },
-  { id: "lessons", iconName: "check-circle", value: "4", label: "Lessons Completed" },
-  { id: "exams", iconName: "clock", value: "5", label: "Exams Completed" },
+  { id: "streak", iconName: "zap", value: "0", label: "Days Streak" },
+  { id: "lessons", iconName: "check-circle", value: "0", label: "Lessons Completed" },
+  { id: "exams", iconName: "clock", value: "0", label: "Exams Completed" },
 ];
 
 interface AchievementItemProps {
@@ -65,7 +65,7 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: Colors.cardBg,
     borderRadius: 12,
-    borderWidth: 1,
+    borderWidth: 0.2,
     borderColor: Colors.border,
     padding: 12,
   },

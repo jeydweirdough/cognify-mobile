@@ -1,6 +1,9 @@
+import { useAuth } from '@/lib/auth';
+import { storage } from '@/lib/storage';
+import { Asset } from 'expo-asset';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import { SafeAreaView, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image, SafeAreaView, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 const Colors = {
   primary: '#4B2C6F',
@@ -12,19 +15,26 @@ const Colors = {
 };
 
 const AVATARS = [
-  { id: 1, color: '#F4D03F', emoji: '👩‍🏫' }, 
-  { id: 2, color: '#F5B7B1', emoji: '👩🏻‍🎓' }, 
-  { id: 3, color: '#E67E22', emoji: '🧑‍🎓' }, 
-  { id: 4, color: '#EDBB99', emoji: '👨🏻‍💻' }, 
+  { id: 1, color: '#F4D03F', source: require('@/assets/images/avatar1.jpg') },
+  { id: 2, color: '#F5B7B1', source: require('@/assets/images/avatar2.jpg') },
+  { id: 3, color: '#E67E22', source: require('@/assets/images/avatar3.jpg') },
+  { id: 4, color: '#EDBB99', source: require('@/assets/images/avatar4.jpg') },
 ];
 
 export default function Step4() {
   const router = useRouter();
+  const { updateProfile, setUser } = useAuth();
   const [selected, setSelected] = useState<number | null>(null);
+  const [selectedUri, setSelectedUri] = useState<string | null>(null);
 
-  const handleFinish = () => {
+  const handleFinish = async () => {
     if (selected !== null) {
-      // Redirect to Main App
+      if (selectedUri) {
+        try {
+          await updateProfile({ profile_picture: selectedUri } as any);
+        } catch {}
+      }
+      await storage.setItem('onboarding_completed', 'true');
       router.replace('/(app)');
     }
   };
@@ -65,9 +75,19 @@ export default function Step4() {
                   { backgroundColor: avatar.color },
                   isSelected && styles.avatarSelected,
                 ]}
-                onPress={() => setSelected(avatar.id)}
+                onPress={() => {
+                  setSelected(avatar.id);
+                  const asset = Asset.fromModule(avatar.source);
+                  const resolved = asset?.uri as string;
+                  setSelectedUri(resolved);
+                  try {
+                    // Optimistic local update so headers refresh instantly
+                    setUser((prev) => (prev ? { ...prev, profile_picture: resolved } : prev));
+                    updateProfile({ profile_picture: resolved } as any);
+                  } catch {}
+                }}
               >
-                <Text style={{ fontSize: 50 }}>{avatar.emoji}</Text>
+                <Image source={avatar.source} style={{ width: '100%', height: '100%', borderRadius: 16 }} />
               </TouchableOpacity>
             );
           })}

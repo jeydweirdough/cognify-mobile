@@ -11,10 +11,10 @@ const api = axios.create({
   timeout: 30000,
   headers: {
     'Content-Type': 'application/json',
+    'Client-Type': 'mobile',  // 🔥 NEW: Tells backend this is a mobile client
   },
 });
 
-// Track if we're currently refreshing to prevent multiple refresh calls
 let isRefreshing = false;
 let refreshSubscribers: ((token: string) => void)[] = [];
 
@@ -45,10 +45,8 @@ api.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
-    // If 401 and we haven't retried yet
     if (error.response?.status === 401 && !originalRequest._retry) {
       if (isRefreshing) {
-        // Wait for the refresh to complete
         return new Promise((resolve) => {
           addRefreshSubscriber((token: string) => {
             originalRequest.headers.Authorization = `Bearer ${token}`;
@@ -62,36 +60,30 @@ api.interceptors.response.use(
 
       try {
         const refreshToken = await storage.getItem(REFRESH_TOKEN_KEY);
-        
         if (!refreshToken) {
           throw new Error('No refresh token available');
         }
 
-        // Try to refresh the token
-        const { data } = await axios.post(`${API_URL}/auth/refresh`, {
-          refresh_token: refreshToken,
-        });
+        // 🔥 CHANGED: Send refresh_token in body (not as cookie)
+        const { data } = await axios.post(
+          `${API_URL}/auth/refresh`,
+          { refresh_token: refreshToken },
+          { headers: { 'Client-Type': 'mobile' } }
+        );
 
-        // Save new tokens
+        // 🔥 CHANGED: Backend now returns tokens in response body for mobile
         await storage.setItem(TOKEN_KEY, data.token);
         await storage.setItem(REFRESH_TOKEN_KEY, data.refresh_token);
 
-        // Update the failed request and notify subscribers
         originalRequest.headers.Authorization = `Bearer ${data.token}`;
         onRefreshed(data.token);
-        
         isRefreshing = false;
-        
-        // Retry original request with new token
+
         return api(originalRequest);
       } catch (refreshError) {
-        // Refresh failed, clear tokens
         isRefreshing = false;
         await storage.deleteItem(TOKEN_KEY);
         await storage.deleteItem(REFRESH_TOKEN_KEY);
-        
-        // You might want to emit an event or use a callback here
-        // to notify your auth context to update its state
         return Promise.reject(refreshError);
       }
     }
@@ -101,22 +93,112 @@ api.interceptors.response.use(
 );
 
 export interface SubjectCreatePayload {
-    title: string;
-    // You can add more fields here if you expand the modal
-    description?: string;
-    // pqf_level?: number;
+  title: string;
+  description?: string;
 }
 
-export const createSubject = async (data: SubjectCreatePayload) => { // <--- NEW FUNCTION
-    const response = await api.post('/subjects/', data);
-    return response.data; // Returns the success message and subject ID from the backend
+export const createSubject = async (data: SubjectCreatePayload) => {
+  const response = await api.post('/subjects/', data);
+  return response.data;
 };
 
 export const getSubjectTopics = async (subjectId: string) => {
-  // Assuming a standard endpoint for fetching a single resource by ID: /subjects/{id}
   const response = await api.get(`/subjects/${subjectId}`);
-  // The backend Subject model contains the 'topics: Topic[]' array.
   return response.data as Subject;
 };
 
-export { api, API_URL, TOKEN_KEY, REFRESH_TOKEN_KEY };
+export { api, API_URL, REFRESH_TOKEN_KEY, TOKEN_KEY };
+export const getDiagnosticAssessmentQuestions = async () => {
+  const response = await api.get('/assessments/');
+  return response.data?.items ?? [];
+};
+
+export const getCurrentUserProfile = async () => {
+  const token = await storage.getItem(TOKEN_KEY);
+  if (!token) throw new Error('unauthenticated');
+  const r1 = await api.get('/profiles/me');
+  return r1.data;
+};
+
+export const setDiagnosticStatus = async (taken: boolean) => {
+  try {
+    await api.post('/users/me/diagnostic-status', { taken });
+  } catch (e) {
+    return;
+  }
+};
+
+export const hasTakenDiagnostic = async (): Promise<boolean> => {
+  const token = await storage.getItem(TOKEN_KEY);
+  if (!token) return false;
+  try {
+    const me = await getCurrentUserProfile();
+    return Boolean(
+      me?.has_taken_diagnostic ??
+      me?.diagnostic_taken ??
+      me?.diagnostic_completed ??
+      me?.is_diagnostic_done ??
+      me?.meta?.diagnostic_taken
+    );
+  } catch {
+    return false;
+  }
+};
+
+export interface DiagnosticSubmissionPayload {
+  user_id?: string;
+  assessment_id?: string;
+  subject_id?: string;
+  answers: Array<{ question_id: string | number; answer: string | number | null; is_correct: boolean; competency_id?: string }>;
+  score: number;
+  total_items: number;
+  time_taken_seconds: number;
+}
+
+export const submitDiagnosticSubmission = async (payload: DiagnosticSubmissionPayload) => {
+  try {
+    const r1 = await api.post('/assessments/submissions', payload);
+    return r1.data;
+  } catch {}
+  try {
+    const r2 = await api.post('/assessments/diagnostic/submit', payload);
+    return r2.data;
+  } catch {}
+  try {
+    const r3 = await api.post('/users/me/diagnostic-submission', payload);
+    return r3.data;
+  } catch {}
+  try {
+    const r4 = await api.post('/profiles/me/diagnostic-submission', payload);
+    return r4.data;
+  } catch {}
+  const r5 = await api.post('/api/users/me/diagnostic-submission', payload);
+  return r5.data;
+};
+
+export const getDiagnosticRecommendations = async () => {
+  try {
+    const r1 = await api.get('/users/me/diagnostic-recommendations');
+    return r1.data;
+  } catch {}
+  try {
+    const r2 = await api.get('/profiles/me/diagnostic-recommendations');
+    return r2.data;
+  } catch {}
+  try {
+    const r3 = await api.get('/assessments/recommendations/me');
+    return r3.data;
+  } catch {}
+  const r4 = await api.get('/api/users/me/diagnostic-recommendations');
+  return r4.data;
+};
+
+export const getStudentReportAnalytics = async (userId: string) => {
+  const r = await api.get(`/analytics/student_report/${userId}`);
+  return r.data;
+};
+
+export const listSubjects = async () => {
+  const r = await api.get('/subjects/');
+  return r.data?.items ?? r.data ?? [];
+};
