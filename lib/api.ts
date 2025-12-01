@@ -200,5 +200,7 @@ export const getStudentReportAnalytics = async (userId: string) => {
 
 export const listSubjects = async () => {
   const r = await api.get('/subjects/');
-  return r.data?.items ?? r.data ?? [];
+  const data = r.data;
+  if (Array.isArray(data)) return data;
+  return data?.subjects ?? data?.items ?? [];
 };

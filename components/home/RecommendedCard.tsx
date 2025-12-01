@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 // Assuming FONT_FAMILY and PRIMARY_COLOR are correctly imported
 import { FONT_FAMILY, PRIMARY_COLOR } from "@/constants/cognify-theme";
 import { getDiagnosticRecommendations, getSubjectTopics, listSubjects } from "@/lib/api";
@@ -22,31 +22,43 @@ export default function RecommendedCard({
   const { user, token } = useAuth() as any;
   const [localHasTaken, setLocalHasTaken] = useState(false);
   const [recommendedSubjects, setRecommendedSubjects] = useState<string[]>([]);
+  const [loading, setLoading] = useState(true);
 
   const resolveSubjectTitles = async (subjects: string[]) => {
     try {
       const items = await listSubjects();
       const byId = new Map<string, string>();
       const byTitleLower = new Map<string, string>();
+      const byTitleLowerToId = new Map<string, string>();
       items.forEach((it: any) => {
         const id = String(it?.id ?? "");
         const title = String(it?.title ?? "");
         if (id) byId.set(id, title);
-        if (title) byTitleLower.set(title.toLowerCase(), title);
+        if (title) {
+          const lower = title.toLowerCase();
+          byTitleLower.set(lower, title);
+          if (id) byTitleLowerToId.set(lower, id);
+        }
       });
 
       const resolved = await Promise.all(
         subjects.map(async (s) => {
           const key = String(s);
-          const t1 = byId.get(key);
-          if (t1) return t1;
-          const t2 = byTitleLower.get(key.toLowerCase());
-          if (t2) return t2;
+          const lower = key.toLowerCase();
+          const id = byId.has(key) ? key : (byTitleLowerToId.get(lower) ?? null);
+          if (id) {
+            try {
+              const d = await getSubjectTopics(id);
+              return String(d?.title ?? byId.get(id) ?? key);
+            } catch {
+              return byId.get(id) ?? key;
+            }
+          }
           try {
             const d = await getSubjectTopics(key);
-            return String(d?.title ?? key);
+            return String(d?.title ?? byTitleLower.get(lower) ?? key);
           } catch {
-            return key;
+            return byTitleLower.get(lower) ?? key;
           }
         })
       );
@@ -59,6 +71,7 @@ export default function RecommendedCard({
   useEffect(() => {
     const loadRecommendations = async () => {
       try {
+        setLoading(true);
         if (token && user?.id) {
           const data = await getDiagnosticRecommendations();
           const rec = Array.isArray(data?.recommendedSubjects) ? data.recommendedSubjects : [];
@@ -98,6 +111,8 @@ export default function RecommendedCard({
         setLocalHasTaken(true);
       } catch (e) {
         console.error('Failed to load recommendations', e);
+      } finally {
+        setLoading(false);
       }
     };
     loadRecommendations();
@@ -108,6 +123,7 @@ export default function RecommendedCard({
       let active = true;
       const refresh = async () => {
         try {
+          setLoading(true);
           if (!user?.id) return;
           const key = `diagnostic_assessment_results:${user.id}`;
           const raw = await storage.getItem(key);
@@ -127,7 +143,9 @@ export default function RecommendedCard({
             setRecommendedSubjects(titles);
             setLocalHasTaken(true);
           }
-        } catch (e) {}
+        } catch (e) {} finally {
+          if (active) setLoading(false);
+        }
       };
       refresh();
       return () => {
@@ -142,7 +160,14 @@ export default function RecommendedCard({
   const effectiveHasTaken = hasTakenAssessment ?? localHasTaken;
   const effectiveSubjects = recommendedSubjects.length > 0 ? recommendedSubjects : (weakestSubject ? [weakestSubject] : []);
 
-  if (!effectiveHasTaken) {
+  if (loading) {
+    title = "Loading";
+    content = (
+      <View style={{ paddingVertical: 20, alignItems: 'center' }}>
+        <ActivityIndicator color={PRIMARY_COLOR} />
+      </View>
+    );
+  } else if (!effectiveHasTaken) {
     // STATE 1: HINDI PA NAKAKAPAG-TAKE (NO SCORE)
     title = "Discover Your Learning Path";
     content = (

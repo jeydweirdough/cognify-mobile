@@ -1,8 +1,22 @@
 import { FONT_FAMILY, PRIMARY_COLOR  } from "@/constants/cognify-theme";
-import React from "react";
-import { Image, Platform, Pressable, StyleSheet, Text, View } from "react-native";
+import React, { useEffect, useState } from "react";
+import { ActivityIndicator, Image, Platform, Pressable, StyleSheet, Text, View } from "react-native";
 
 export default function ReviewCognifyCard() {
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    const t = setTimeout(() => setLoading(false), 300);
+    return () => clearTimeout(t);
+  }, []);
+
+  if (loading) {
+    return (
+      <Pressable style={styles.takenSection} android_ripple={{ color: "rgba(255,255,255,0.15)" }}>
+        <ActivityIndicator color="#FFF" />
+      </Pressable>
+    );
+  }
+
   return (
     <Pressable style={styles.takenSection} android_ripple={{ color: "rgba(255,255,255,0.15)" }}>
       <View style={styles.takenBackdrop} />
@@ -65,4 +79,3 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
 });
-

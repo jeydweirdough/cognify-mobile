@@ -3,19 +3,15 @@ import { Platform, StyleSheet, Text, View } from "react-native";
 import { CircularProgress } from "../subjects/CircularProgress";
 import { useAuth } from "@/lib/auth";
 import { getStudentReportAnalytics } from "@/lib/api";
+import { Fonts } from "@/constants/cognify-theme";
 
 const Colors = {
   white: "#FFFFFF",
 };
 
-const Fonts = {
-  regular: "Poppins-Regular",
-};
-
 export const ReadinessCard = ({ data }: any) => {
   const { user } = useAuth();
   const [percentage, setPercentage] = useState<number>(typeof data?.percentage === "number" ? data.percentage : 0);
-  const [subtitle, setSubtitle] = useState<string>(data?.subtitle || "Your current pass probability");
 
   useEffect(() => {
     let mounted = true;
@@ -28,10 +24,7 @@ export const ReadinessCard = ({ data }: any) => {
         const pct = Number(op?.passing_probability) || 0;
         const risk = op?.risk_level ? String(op.risk_level) : null;
         const rec = op?.recommendation ? String(op.recommendation) : null;
-        if (mounted) {
-          setPercentage(pct);
-          if (risk || rec) setSubtitle(risk && rec ? `${risk} • ${rec}` : risk || rec || subtitle);
-        }
+        if (mounted) setPercentage(pct);
       } catch {}
     };
     load();
@@ -42,7 +35,7 @@ export const ReadinessCard = ({ data }: any) => {
     <View style={styles.readinessCard}>
       <View style={{ flex: 1, marginRight: 10 }}>
         <Text style={styles.readinessTitle}>{data?.title || "Readiness Level"}</Text>
-        <Text style={styles.readinessSubtitle}>{subtitle}</Text>
+        <Text style={styles.readinessSubtitle}>Your current pass probability</Text>
       </View>
 
       <CircularProgress percentage={Math.round(percentage)} />
@@ -72,12 +65,12 @@ const styles = StyleSheet.create({
     }),
   },
   readinessTitle: {
-    fontFamily: Fonts.regular,
+    fontFamily: Fonts.lexendDecaMedium,
     fontSize: 16,
     color: Colors.white,
   },
   readinessSubtitle: {
-    fontFamily: Fonts.regular,
+    fontFamily: Fonts.lexendDecaRegular,
     fontSize: 13,
     color: "#D4B8E3",
     marginTop: 4,

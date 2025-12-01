@@ -81,54 +81,11 @@ export default function SubjectModulesScreen() {
       });
 
       const contentfulTopics = fetchedTopics.filter(m => !!m.lectureContentUrl);
-
-      if (contentfulTopics.length === 0) {
-        const baseTitle = subjectTitle || 'Subject';
-        const mock: ModuleListItem[] = [
-          {
-            id: `mock-${id}-1`,
-            title: `Introduction to ${baseTitle}`,
-            author: 'Cognify Content',
-            progress: 0,
-            quizTaken: false,
-            lectureContentUrl: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf',
-          },
-          {
-            id: `mock-${id}-2`,
-            title: `${baseTitle}: Core Concepts`,
-            author: 'Cognify Content',
-            progress: 0,
-            quizTaken: false,
-            lectureContentUrl: 'https://www.clickdimensions.com/links/TestPDFfile.pdf',
-          },
-        ];
-        setModules(mock);
-      } else {
-        setModules(contentfulTopics);
-      }
+      setModules(contentfulTopics);
 
     } catch (error) {
       console.error("Failed to fetch subject topics:", error);
-      const baseTitle = subjectTitle || 'Subject';
-      const mock: ModuleListItem[] = [
-        {
-          id: `mock-${id}-1`,
-          title: `Introduction to ${baseTitle}`,
-          author: 'Cognify Content',
-          progress: 0,
-          quizTaken: false,
-          lectureContentUrl: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf',
-        },
-        {
-          id: `mock-${id}-2`,
-          title: `${baseTitle}: Core Concepts`,
-          author: 'Cognify Content',
-          progress: 0,
-          quizTaken: false,
-          lectureContentUrl: 'https://www.clickdimensions.com/links/TestPDFfile.pdf',
-        },
-      ];
-      setModules(mock);
+      setModules([]);
     } finally {
       setLoading(false);
     }
@@ -292,7 +249,7 @@ export default function SubjectModulesScreen() {
 
       {/* 💡 EDITED: Filter to only show topics with content (material uploaded) */}
       <FlatList
-        data={modules.filter(m => m.lectureContentUrl)} 
+        data={modules}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.listContainer}
         renderItem={renderModuleItem}

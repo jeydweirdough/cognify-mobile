@@ -1,8 +1,24 @@
-import { Colors, Fonts } from "@/constants/cognify-theme";
-import React from "react";
-import { Image, Platform, StyleSheet, Text, View } from "react-native";
+import { Fonts } from "@/constants/cognify-theme";
+import React, { useEffect, useState } from "react";
+import { ActivityIndicator, Image, Platform, StyleSheet, Text, View } from "react-native";
 
 export default function HomeCard() {
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    const t = setTimeout(() => setLoading(false), 300);
+    return () => clearTimeout(t);
+  }, []);
+
+  if (loading) {
+    return (
+      <View style={styles.card}>
+        <View style={{ height: 100, alignItems: "center", justifyContent: "center" }}>
+          <ActivityIndicator color="#FFF" />
+        </View>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.card}>
       <View style={styles.contentRow}>

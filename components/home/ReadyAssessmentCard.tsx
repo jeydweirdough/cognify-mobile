@@ -1,10 +1,24 @@
 import { FONT_FAMILY, PRIMARY_COLOR } from "@/constants/cognify-theme";
 import { useRouter } from "expo-router";
-import React from "react";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import React, { useEffect, useState } from "react";
+import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
 export default function ReadyAssessmentCard() {
   const router = useRouter();
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    const t = setTimeout(() => setLoading(false), 300);
+    return () => clearTimeout(t);
+  }, []);
+
+  if (loading) {
+    return (
+      <View style={styles.assessmentSection}>
+        <ActivityIndicator color="#FFF" />
+      </View>
+    );
+  }
+
   return (
     <View style={styles.assessmentSection}>
       <Text style={styles.assessmentTitle}>Ready to ace your exam?</Text>
@@ -62,4 +76,3 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
 });
-

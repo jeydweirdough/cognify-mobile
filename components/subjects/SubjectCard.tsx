@@ -2,7 +2,7 @@
 
 import { Fonts } from "@/constants/cognify-theme";
 import { router } from "expo-router";
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
   Image,
   Platform,
@@ -11,6 +11,8 @@ import {
   Text,
   View,
 } from "react-native";
+import { useAuth } from "@/lib/auth";
+import { getStudentReportAnalytics } from "@/lib/api";
 
 // Images for subjects
 const images: Record<string, any> = {
@@ -45,27 +47,43 @@ const getImageSource = (id: string): any => {
 };
 
 export const SubjectCard = ({ data }: { data: SubjectCardData }) => {
-  // --- NEW LOGIC FOR PROGRESS CALCULATION (UNCHANGED) ---
-  const topicIdsWithContent = data.topicIds; // Assume all fetched topic IDs are valid materials
+  const { user } = useAuth() as any;
+  const [backendPercentage, setBackendPercentage] = useState<number | null>(null);
+  const topicIdsWithContent = data.topicIds;
   const totalMaterials = topicIdsWithContent.length;
 
   let overallPercentage = 0;
 
   if (totalMaterials > 0) {
-    // 1. Sum up the progress of all relevant topics (those with IDs in topicIds)
     const totalProgressSum = topicIdsWithContent.reduce((sum, topicId) => {
-      // Get the progress for this topic ID from the map
       const progress = data.topicProgressMap[topicId] || 0;
       return sum + progress;
     }, 0);
-
-    // 2. Calculate the overall percentage
-    // (Total Sum of Progress) / (Total Number of Materials)
     overallPercentage = Math.round(totalProgressSum / totalMaterials);
   }
 
-  // Use the calculated percentage for display
-  const displayPercentage = overallPercentage;
+  useEffect(() => {
+    let mounted = true;
+    const run = async () => {
+      try {
+        if (!user?.id) return;
+        const res = await getStudentReportAnalytics(user.id);
+        const resData = res?.data || res;
+        const perf = Array.isArray(resData?.subject_performance) ? resData.subject_performance : [];
+        const found = perf.find((sp: any) => {
+          const sid = String(sp.subject_id ?? sp.id ?? "");
+          const st = String(sp.subject_title ?? sp.title ?? "").toLowerCase();
+          return sid === String(data.id) || st === String(data.title).toLowerCase();
+        });
+        const p = found && found.average_score != null ? Number(found.average_score) || 0 : null;
+        if (mounted) setBackendPercentage(p);
+      } catch {}
+    };
+    run();
+    return () => { mounted = false; };
+  }, [user?.id, data.id, data.title]);
+
+  const displayPercentage = backendPercentage != null ? Math.round(backendPercentage) : overallPercentage;
 
   return (
     <View style={{ marginBottom: 20 }}>
