@@ -1,6 +1,8 @@
 // index.tsx (LearningScreen.tsx)
 
-import { api, getSubjectTopics } from "@/lib/api"; // 💡 EDITED: Import getSubjectTopics
+import { api, getSubjectTopics, listSubjects } from "@/lib/api"; // 💡 EDITED: Import listSubjects
+import { Topic } from "@/lib/types"; // 💡 Import Topic type if available
+import { FontAwesome5 } from "@expo/vector-icons";
 import { useFonts } from "expo-font";
 import React, { useEffect, useState } from "react";
 import {
@@ -9,18 +11,16 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  View,
   TouchableOpacity,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { FontAwesome5 } from "@expo/vector-icons";
-import { Topic } from "@/lib/types"; // 💡 Import Topic type if available
 
 // Assuming these are defined elsewhere or passed correctly
+import { AddSubjectModal } from "@/components/subjects/AddSubjectModal";
 import MotivationCard from "@/components/subjects/Motivation-quote";
 import { SubjectCard } from "@/components/subjects/SubjectCard";
 import Header from "@/components/ui/header";
-import { AddSubjectModal } from "@/components/subjects/AddSubjectModal";
 
 const Colors = {
   background: "#F8F8F8",
@@ -111,9 +111,8 @@ export default function LearningScreen() {
   // 💡 EDITED: Main function to fetch subjects AND their topic/module IDs
   const fetchSubjectsWithProgress = async () => {
     try {
-      // 1. Fetch Subject List
-      const response = await api.get("/subjects/");
-      const backendSubjects: BackendSubject[] = response.data.subjects || [];
+      // 1. Fetch Subject List (normalized)
+      const backendSubjects: BackendSubject[] = await listSubjects();
       const progressMap = getGlobalTopicProgress(); // Get current progress map
       setTopicProgressMap(progressMap);
 
@@ -130,9 +129,9 @@ export default function LearningScreen() {
           
           try {
             // Call the endpoint used in SubjectModulesScreen.tsx
-            const topicsResponse = await getSubjectTopics(sub.id);
-            // Filter topics to only include those with content, as done in SubjectModulesScreen.tsx
-            const topicsWithContent = topicsResponse.topics.filter((t: Topic) => t.lecture_content);
+            const topicsResponse = await getSubjectTopics(String(sub.id));
+            const topics = Array.isArray(topicsResponse?.topics) ? topicsResponse.topics : [];
+            const topicsWithContent = topics.filter((t: Topic) => t.lecture_content);
             topicIds = topicsWithContent.map((t: Topic) => t.id);
             
           } catch (error) {
@@ -142,8 +141,8 @@ export default function LearningScreen() {
           
           return {
             id: sub.id,
-            title: sub.title,
-            description: sub.description || "No description available",
+            title: String(sub.title || "Untitled Subject"),
+            description: String(sub.description || "No description available"),
             // The percentage will be CALCULATED in SubjectCard
             iconColor: palette.iconColor,
             iconBgColor: palette.iconBgColor,

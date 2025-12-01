@@ -1,6 +1,8 @@
 // SubjectCard.tsx
 
 import { Fonts } from "@/constants/cognify-theme";
+import { getStudentReportAnalytics, getSubjectTopics } from "@/lib/api";
+import { useAuth } from "@/lib/auth";
 import { router } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
@@ -11,8 +13,6 @@ import {
   Text,
   View,
 } from "react-native";
-import { useAuth } from "@/lib/auth";
-import { getStudentReportAnalytics } from "@/lib/api";
 
 // Images for subjects
 const images: Record<string, any> = {
@@ -49,6 +49,9 @@ const getImageSource = (id: string): any => {
 export const SubjectCard = ({ data }: { data: SubjectCardData }) => {
   const { user } = useAuth() as any;
   const [backendPercentage, setBackendPercentage] = useState<number | null>(null);
+  const [subjectTitle, setSubjectTitle] = useState<string>(data.title);
+  const [subjectDescription, setSubjectDescription] = useState<string>(data.description);
+  const [subjectImageUrl, setSubjectImageUrl] = useState<string | null>(null);
   const topicIdsWithContent = data.topicIds;
   const totalMaterials = topicIdsWithContent.length;
 
@@ -83,36 +86,51 @@ export const SubjectCard = ({ data }: { data: SubjectCardData }) => {
     return () => { mounted = false; };
   }, [user?.id, data.id, data.title]);
 
+  useEffect(() => {
+    let mounted = true;
+    const loadSubject = async () => {
+      try {
+        const s = await getSubjectTopics(String(data.id));
+        const t = String(s?.title ?? subjectTitle ?? "");
+        const d = String(s?.description ?? subjectDescription ?? "");
+        if (mounted) {
+          if (t) setSubjectTitle(t);
+          if (d) setSubjectDescription(d);
+        }
+      } catch {}
+    };
+    loadSubject();
+    return () => { mounted = false; };
+  }, [data.id]);
+
   const displayPercentage = backendPercentage != null ? Math.round(backendPercentage) : overallPercentage;
 
   return (
     <View style={{ marginBottom: 20 }}>
-      {/* Title outside the card */}
-      <Text style={styles.subjectTitleOutside}>{data.title}</Text>
+      <Text style={styles.subjectTitleOutside}>{subjectTitle}</Text>
 
       <Pressable
         style={[styles.subjectCard, { backgroundColor: data.cardBgColor }]}
         onPress={() =>
           router.push({
             pathname: "/(app)/subject/[id]",
-            params: { id: data.id, subjectTitle: data.title },
+            params: { id: data.id, subjectTitle: subjectTitle },
           })
         }
       >
         <View style={styles.row}>
-          {/* Icon box */}
           <View style={[styles.iconBox, { backgroundColor: data.iconBgColor }]}>
-            <Image
-              source={getImageSource(data.title)}
-              style={styles.iconImage}
-              resizeMode="contain"
-            />
+            {subjectImageUrl ? (
+              <Image source={{ uri: subjectImageUrl }} style={styles.iconImage} resizeMode="contain" />
+            ) : (
+              <Image source={getImageSource(subjectTitle)} style={styles.iconImage} resizeMode="contain" />
+            )}
           </View>
 
           {/* Right side content */}
           <View style={styles.rightColumn}>
             <View style={styles.descRow}>
-              <Text style={styles.description}>{data.description}</Text>
+              <Text style={styles.description}>{subjectDescription}</Text>
               {/* Display the CALCULATED percentage */}
               <Text style={styles.percentageText}>{displayPercentage}%</Text>
             </View>

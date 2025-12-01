@@ -204,3 +204,10 @@ export const listSubjects = async () => {
   if (Array.isArray(data)) return data;
   return data?.subjects ?? data?.items ?? [];
 };
+
+export const listModulesBySubject = async (subjectId: string) => {
+  const r = await api.get('/modules/', { params: { subject_id: subjectId } });
+  const data = r.data;
+  if (Array.isArray(data)) return data;
+  return data?.modules ?? data?.items ?? [];
+};

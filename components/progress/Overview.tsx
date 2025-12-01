@@ -32,7 +32,20 @@ interface SubjectData {
     color: string;
 }
 
-const COLORS = ["#34D399", "#F97316", "#EC4899", "#3498DB", "#6A2A94", "#22C55E", "#EAB308", "#3B82F6"];
+const COLORS = [
+    "#34D399",
+    "#F97316",
+    "#EC4899",
+    "#3498DB",
+    "#6A2A94",
+    "#22C55E",
+    "#EAB308",
+    "#3B82F6",
+    "#8B5CF6",
+    "#14B8A6",
+    "#F43F5E",
+    "#10B981"
+];
 
 
 function mapPercentageToStatus(p: number): StatusKey {
@@ -61,11 +74,11 @@ const SubjectItem: React.FC<SubjectItemProps> = ({ data }) => {
     };
 
     return (
-        <TouchableOpacity style={[overviewStyles.metricCard, { backgroundColor: `${data.color}33` }]} onPress={handlePress}>
+        <TouchableOpacity style={[overviewStyles.metricCard, { backgroundColor: `${data.color}33`, borderColor: data.color }]} onPress={handlePress}>
             <View style={overviewStyles.metricHeader}>
                 <Text style={overviewStyles.metricTitle}>{data.title}</Text>
                 <View style={overviewStyles.iconCircle}>
-                    <Feather name="arrow-up-right" size={16} color={data.color} />
+                    <Feather name="arrow-up-right" size={16} color={data.color} />  
                 </View>
             </View>
             <Text style={[overviewStyles.metricValue, { color: Colors.text }]}>{Math.round(data.percentage)}%</Text>
@@ -195,7 +208,7 @@ export const ProgressOverviewCard: React.FC = () => {
                     </View>
                 ) : (
                     <View>
-                        <View style={overviewStyles.analysisCard}>
+                        {/* <View style={overviewStyles.analysisCard}>
                             <View style={overviewStyles.analysisRow}>
                                 <View style={overviewStyles.analysisTextCol}>
                                     <Text style={overviewStyles.analysisTitle}>Focus Now 🧐 </Text>
@@ -216,7 +229,7 @@ export const ProgressOverviewCard: React.FC = () => {
                                     <Image source={require("@/assets/images/youregood.png")} style={overviewStyles.analysisImage} />
                                 </View>
                             </View>
-                        </View>
+                        </View> */}
                     </View>
                 )}
             </View>

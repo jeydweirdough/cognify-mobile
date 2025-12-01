@@ -1,8 +1,8 @@
 // SubjectModulesScreen.tsx
 
 import { Colors, Fonts } from "@/constants/cognify-theme";
-import { getSubjectTopics } from "@/lib/api"; // Assuming api.ts is at /api
-import { ModuleListItem, Topic } from "@/lib/types"; // Import new types
+import { listModulesBySubject } from "@/lib/api";
+import { ModuleListItem } from "@/lib/types";
 import { FontAwesome, Ionicons } from "@expo/vector-icons";
 import {
   router,
@@ -11,18 +11,28 @@ import {
   useLocalSearchParams,
   useNavigation,
 } from "expo-router";
-import { useCallback, useLayoutEffect, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
-  Image,
   Pressable,
   SafeAreaView,
   StatusBar,
   StyleSheet,
   Text,
-  View,
+  View
 } from "react-native";
+
+const FOLDER_COLORS = [
+  "#DDF6D2", 
+  "#E8F3FF", 
+  "#FDFFB8", 
+  "#FFE1E0", 
+  "#F1E9FF", 
+  "#FFEFF2", 
+];
+
+ 
 
 // --- GLOBAL STORAGE HACK FOR DEMO ---
 if (!(global as any).MODULE_PROGRESS) {
@@ -41,6 +51,16 @@ export default function SubjectModulesScreen() {
   const [modules, setModules] = useState<ModuleListItem[]>([]);
   const [loading, setLoading] = useState(true); // 💡 EDITED: Start as true since we are now loading data
   const navigation = useNavigation();
+  const [colorOrder, setColorOrder] = useState<string[]>(FOLDER_COLORS);
+
+  useEffect(() => {
+    const arr = [...FOLDER_COLORS];
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    setColorOrder(arr);
+  }, [id]);
 
   // --- HIDE BOTTOM TABS ---
   useLayoutEffect(() => {
@@ -60,28 +80,20 @@ export default function SubjectModulesScreen() {
 
     setLoading(true);
     try {
-      // 1. Fetch Subject data which contains the topics array
-      const subjectData = await getSubjectTopics(id);
-      
-      // 2. Map Topic array to the ModuleListItem structure
-      const fetchedTopics: ModuleListItem[] = subjectData.topics.map((topic: Topic, index: number) => {
-        // NOTE: 'author', 'progress', and 'quizTaken' are derived/mocked 
-        // until a more complex backend structure is implemented.
-        const storedProgress = (global as any).MODULE_PROGRESS[topic.id] || 0;
-        
+      const modulesData = await listModulesBySubject(id);
+      const fetchedModules: ModuleListItem[] = (modulesData || []).map((mod: any, index: number) => {
+        const storedProgress = (global as any).MODULE_PROGRESS[mod.id] || 0;
         return {
-          id: topic.id,
-          title: topic.title,
-          // TEMP: Use topic ID as author placeholder or pull from a hypothetical author field
-          author: `Content ID: ${topic.id.slice(0, 8)}`, 
+          id: mod.id,
+          title: mod.title ?? "Untitled Module",
+          author: mod.purpose ?? mod.description ?? "",
           progress: storedProgress,
-          quizTaken: storedProgress >= 90 && storedProgress < 100 ? false : storedProgress === 100, // Simple logic
-          lectureContentUrl: topic.lecture_content || null,
+          quizTaken: storedProgress >= 90 && storedProgress < 100 ? false : storedProgress === 100,
+          lectureContentUrl: mod.material_url ?? null,
         };
       });
 
-      const contentfulTopics = fetchedTopics.filter(m => !!m.lectureContentUrl);
-      setModules(contentfulTopics);
+      setModules(fetchedModules);
 
     } catch (error) {
       console.error("Failed to fetch subject topics:", error);
@@ -135,43 +147,34 @@ export default function SubjectModulesScreen() {
     item,
     index,
   }: {
-    item: ModuleListItem; // Use the new interface
+    item: ModuleListItem;
     index: number;
   }) => {
-    // 💡 NEW CHECK: Do not render if lectureContentUrl is null (no material uploaded yet)
-    if (!item.lectureContentUrl) {
-      return null;
-    }
     
     const isCompleted = item.progress >= 100; // Check quizTaken is now part of the 100% logic
     // Show "Quiz Pending" if reading is capped at 90% but quiz not taken
     const showQuizPending = item.progress < 100 && item.progress >= 90; 
 
-    // Re-use cover URLs for visual variation
-    const coverUrls = [
-      "https://covers.openlibrary.org/b/id/8235112-M.jpg",
-      "https://covers.openlibrary.org/b/id/12547189-M.jpg",
-      "https://covers.openlibrary.org/b/id/10603687-M.jpg",
-      "https://covers.openlibrary.org/b/id/8259445-M.jpg",
-    ];
+    const folderColor = colorOrder[index % colorOrder.length];
 
     return (
       <Pressable
-        style={styles.card}
-        onPress={() =>
-          router.push({
-            pathname: "/(app)/module/[id]",
-            params: {
-              id: item.id,
-              title: item.title,
-              author: item.author,
-              coverUrl: coverUrls[index % 4],
-              // Pass the material URL to the module screen for display
-              materialUrl: item.lectureContentUrl
-            },
-          })
-        }
+        style={[styles.card, { backgroundColor: folderColor }]}
+        onPress={() => {
+          if (item.lectureContentUrl) {
+            router.push({
+              pathname: "/(app)/module/[id]",
+              params: {
+                id: item.id,
+                title: item.title,
+                author: item.author,
+                materialUrl: item.lectureContentUrl,
+              },
+            });
+          }
+        }}
       >
+        <View style={[styles.folderTab, { backgroundColor: folderColor }]} />
         <View style={styles.checkboxContainer}>
           <View
             style={[styles.checkbox, isCompleted && styles.checkboxChecked]}
@@ -181,12 +184,6 @@ export default function SubjectModulesScreen() {
             )}
           </View>
         </View>
-
-        <Image
-          source={{ uri: coverUrls[index % 4] }}
-          style={styles.bookCover}
-          resizeMode="cover"
-        />
 
         <View style={styles.contentContainer}>
           <View>
@@ -205,9 +202,11 @@ export default function SubjectModulesScreen() {
                 style={[styles.progressBarFill, { width: `${item.progress}%` }]}
               />
             </View>
-            {showQuizPending && (
+            {showQuizPending ? (
               <Text style={styles.quizPendingText}>Quiz Pending</Text>
-            )}
+            ) : !item.lectureContentUrl ? (
+              <Text style={styles.quizPendingText}>No material uploaded</Text>
+            ) : null}
           </View>
         </View>
       </Pressable>
@@ -246,6 +245,11 @@ export default function SubjectModulesScreen() {
       <Stack.Screen options={{ headerShown: false }} />
 
       {renderHeader()}
+
+      <View style={styles.sectionHeader}>
+        <Text style={styles.sectionTitle}>Begin your learning journey</Text>
+        <Text style={styles.sectionSubtitle}>Select a module to get started</Text>
+      </View>
 
       {/* 💡 EDITED: Filter to only show topics with content (material uploaded) */}
       <FlatList
@@ -333,7 +337,6 @@ const styles = StyleSheet.create({
   },
   card: {
     flexDirection: "row",
-    backgroundColor: "#FBFCE5",
     borderRadius: 12,
     padding: 15,
     marginTop: 15,
@@ -345,6 +348,17 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 4,
     elevation: 2,
+  },
+  folderTab: {
+    position: "absolute",
+    top: -6,
+    left: 16,
+    width: 56,
+    height: 16,
+    borderTopLeftRadius: 6,
+    borderTopRightRadius: 6,
+    borderWidth: 1,
+    borderColor: "#DBCFEA",
   },
   checkboxContainer: {
     marginRight: 12,
@@ -364,17 +378,10 @@ const styles = StyleSheet.create({
     backgroundColor: "#B71C1C",
     borderColor: "#B71C1C",
   },
-  bookCover: {
-    width: 70,
-    height: 100,
-    borderRadius: 2,
-    marginRight: 15,
-    backgroundColor: "#ddd",
-  },
   contentContainer: {
     flex: 1,
     justifyContent: "space-between",
-    paddingVertical: 2,
+    paddingVertical: 4,
   },
   cardTitle: {
     fontFamily: Fonts.poppinsMedium,
@@ -409,5 +416,21 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.poppinsMedium,
     marginTop: 4,
     textAlign: "right",
+  },
+  sectionHeader: {
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    paddingBottom: 4,
+  },
+  sectionTitle: {
+    fontFamily: Fonts.poppinsMedium,
+    fontSize: 18,
+    color: "#1A1A1A",
+  },
+  sectionSubtitle: {
+    fontFamily: Fonts.poppinsRegular,
+    fontSize: 12,
+    color: "#666",
+    marginTop: 2,
   },
 });
