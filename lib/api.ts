@@ -110,7 +110,9 @@ export const getSubjectTopics = async (subjectId: string) => {
 export { api, API_URL, REFRESH_TOKEN_KEY, TOKEN_KEY };
 export const getDiagnosticAssessmentQuestions = async () => {
   const response = await api.get('/assessments/');
-  return response.data?.items ?? [];
+  const data = response.data;
+  if (Array.isArray(data)) return data;
+  return data?.assessments ?? data?.items ?? [];
 };
 
 export const getCurrentUserProfile = async () => {
