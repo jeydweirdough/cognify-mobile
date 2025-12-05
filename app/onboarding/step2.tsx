@@ -47,9 +47,9 @@ export default function Step2() {
         
         {/* Progress Bar (2nd active) */}
         <View style={styles.progressContainer}>
-          <View style={[styles.progressBar, { backgroundColor: Colors.primary }]} />
-          <View style={[styles.progressBar, { backgroundColor: Colors.primary }]} />
-          <View style={[styles.progressBar, { backgroundColor: '#E0E0E0' }]} />
+          <View style={[styles.progressBar, styles.progressSpacer, { backgroundColor: Colors.primary }]} />
+          <View style={[styles.progressBar, styles.progressSpacer, { backgroundColor: Colors.primary }]} />
+          <View style={[styles.progressBar, styles.progressSpacer, { backgroundColor: '#E0E0E0' }]} />
           <View style={[styles.progressBar, { backgroundColor: '#E0E0E0' }]} />
         </View>
 
@@ -67,7 +67,7 @@ export default function Step2() {
 
         {/* Options */}
         <View style={styles.optionsContainer}>
-          {SUBJECTS.map((subject) => {
+          {SUBJECTS.map((subject, idx) => {
             // Check if array includes this subject
             const isSelected = selected.includes(subject);
             return (
@@ -77,6 +77,7 @@ export default function Step2() {
                 style={[
                   styles.optionButton,
                   isSelected ? styles.optionSelected : styles.optionInactive,
+                  idx > 0 ? styles.optionSpacing : null,
                 ]}
                 onPress={() => toggleSelection(subject)}
               >
@@ -125,13 +126,15 @@ const styles = StyleSheet.create({
   progressContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
-    gap: 12,
     marginBottom: 50,
   },
   progressBar: {
     height: 10,
     width: 65,
     borderRadius: 5,
+  },
+  progressSpacer: {
+    marginRight: 12,
   },
   header: {
     alignItems: 'center',
@@ -152,9 +155,7 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     paddingHorizontal: 10,
   },
-  optionsContainer: {
-    gap: 16,
-  },
+  optionsContainer: {},
   optionButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -163,6 +164,9 @@ const styles = StyleSheet.create({
     borderRadius: 30,
     borderWidth: 1,
     justifyContent: 'center', // Centered text
+  },
+  optionSpacing: {
+    marginTop: 16,
   },
   optionInactive: {
     backgroundColor: '#FFFFFF',

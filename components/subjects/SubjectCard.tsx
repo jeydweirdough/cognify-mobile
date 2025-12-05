@@ -34,6 +34,7 @@ interface SubjectCardData {
   totalTopics: number; // New prop: total number of topics/modules
   topicProgressMap: Record<string, number>; // New prop: map of topicId -> progress (%)
   topicIds: string[]; // New prop: list of all topic IDs
+  recommendationText?: string; // Optional: show recommended banner if diagnostic taken
 }
 
 /**
@@ -118,6 +119,11 @@ export const SubjectCard = ({ data }: { data: SubjectCardData }) => {
           })
         }
       >
+        {data.recommendationText ? (
+          <View style={styles.recommendBanner}>
+            <Text style={styles.recommendText}>{data.recommendationText}</Text>
+          </View>
+        ) : null}
         <View style={styles.row}>
           <View style={[styles.iconBox, { backgroundColor: data.iconBgColor }]}>
             {subjectImageUrl ? (
@@ -179,6 +185,20 @@ const styles = StyleSheet.create({
       android: { elevation: 1 },
     }),
   },
+  recommendBanner: {
+    backgroundColor: "#FFF8E1",
+    borderColor: "#F6C453",
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    marginBottom: 10,
+  },
+  recommendText: {
+    fontFamily: Fonts.poppinsRegular,
+    fontSize: 12.5,
+    color: "#5A4A00",
+  },
   row: { flexDirection: "row", alignItems: "flex-start" },
   iconBox: {
     width: 72,
@@ -188,7 +208,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   iconImage: { width: 50, height: 50 },
-  rightColumn: { flex: 1, marginLeft: 14 },
+  rightColumn: { flex: 1, marginLeft: 14, minHeight: 72, justifyContent: 'space-between' },
   descRow: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -196,14 +216,14 @@ const styles = StyleSheet.create({
   },
   description: {
     flex: 1,
-    fontFamily: Fonts.lexendDecaRegular,
+    fontFamily: Fonts.poppinsRegular,
     fontSize: 12.5,
-    color: "#333",
+    color: "#000",
     lineHeight: 18,
     marginRight: 12,
   },
   percentageText: {
-    fontFamily: Fonts.lexendDecaMedium,
+    fontFamily: Fonts.poppinsMedium,
     fontSize: 14,
     color: "#444",
     marginTop: 2,
@@ -212,7 +232,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
     height: 6,
     borderRadius: 6,
-    backgroundColor: "#D7D7D7",
+    backgroundColor: "#d4d4d4ff",
     overflow: "hidden",
   },
   progressFill: { height: "100%", borderRadius: 6 },

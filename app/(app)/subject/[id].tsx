@@ -1,8 +1,8 @@
 // SubjectModulesScreen.tsx
 
 import { Colors, Fonts } from "@/constants/cognify-theme";
-import { listModulesBySubject } from "@/lib/api";
-import { ModuleListItem } from "@/lib/types";
+import { getSubjectTopics, listModulesBySubject } from "@/lib/api";
+import { ModuleListItem, Subject } from "@/lib/types";
 import { FontAwesome, Ionicons } from "@expo/vector-icons";
 import {
   router,
@@ -15,19 +15,17 @@ import { useCallback, useEffect, useLayoutEffect, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
+  Image,
   Pressable,
-  SafeAreaView,
   StatusBar,
   StyleSheet,
   Text,
   View
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 const FOLDER_COLORS = [
   "#DDF6D2", 
-  "#E8F3FF", 
-  "#FDFFB8", 
-  "#FFE1E0", 
   "#F1E9FF", 
   "#FFEFF2", 
 ];
@@ -52,6 +50,7 @@ export default function SubjectModulesScreen() {
   const [loading, setLoading] = useState(true); // 💡 EDITED: Start as true since we are now loading data
   const navigation = useNavigation();
   const [colorOrder, setColorOrder] = useState<string[]>(FOLDER_COLORS);
+  const [subjectInfo, setSubjectInfo] = useState<{ title: string; description?: string; category?: string } | null>(null);
 
   useEffect(() => {
     const arr = [...FOLDER_COLORS];
@@ -80,6 +79,13 @@ export default function SubjectModulesScreen() {
 
     setLoading(true);
     try {
+      const subjRes = await getSubjectTopics(id);
+      const subjData: Partial<Subject> = subjRes ?? {} as Partial<Subject>;
+      const sTitle = String(subjData.title ?? subjectTitle ?? "Subject Modules");
+      const sDesc = String(subjData.description ?? "");
+      const sCat = "Subject";
+      setSubjectInfo({ title: sTitle, description: sDesc, category: sCat });
+
       const modulesData = await listModulesBySubject(id);
       const fetchedModules: ModuleListItem[] = (modulesData || []).map((mod: any, index: number) => {
         const storedProgress = (global as any).MODULE_PROGRESS[mod.id] || 0;
@@ -101,7 +107,7 @@ export default function SubjectModulesScreen() {
     } finally {
       setLoading(false);
     }
-  }, [id]);
+  }, [id, subjectTitle]);
 
   // --- SYNC PROGRESS ON FOCUS (MODIFIED) ---
   useFocusEffect(
@@ -140,6 +146,34 @@ export default function SubjectModulesScreen() {
       <View style={{ width: 24, height: 24 }} />
     </View>
   );
+
+  const renderSubjectOverview = () => {
+    const title = subjectInfo?.title ?? String(subjectTitle ?? "Subject Modules");
+    const desc = subjectInfo?.description ?? "No description available.";
+    const tag = subjectInfo?.category && subjectInfo.category.trim().length ? subjectInfo.category : (title.includes("Subject") ? "Subject" : "Subject");
+
+    return (
+      <View style={styles.overviewCard}>
+        <View style={styles.overviewHeaderRow}>
+          <Text style={styles.overviewTitle}>{title}</Text>
+        </View>
+        <View style={styles.overviewTag}><Text style={styles.overviewTagText}>{tag}</Text></View>
+        <View style={styles.overviewLabelsRow}>
+          <Text style={styles.overviewLabelText}>You can do it!</Text>
+        </View>
+        <View style={styles.overviewIllustrationWrap}>
+          <View style={styles.overviewIllustrationCircle}>
+            <Image source={require("@/assets/images/brain.png")} style={{ width: 160, height: 160, resizeMode: 'contain' }} />
+          </View>
+        </View>
+        <View style={styles.courseHeaderRow}>
+          <Text style={styles.courseHeaderText}>Description</Text>
+          <Ionicons name="chevron-down-circle-outline" size={18} color="#6B7280" />
+        </View>
+        <Text style={styles.courseDescText}>{desc}</Text>
+      </View>
+    );
+  };
 
 
   // 💡 EDITED: Update renderModuleItem to use ModuleListItem type
@@ -246,18 +280,21 @@ export default function SubjectModulesScreen() {
 
       {renderHeader()}
 
-      <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>Begin your learning journey</Text>
-        <Text style={styles.sectionSubtitle}>Select a module to get started</Text>
-      </View>
-
-      {/* 💡 EDITED: Filter to only show topics with content (material uploaded) */}
       <FlatList
         data={modules}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.listContainer}
         renderItem={renderModuleItem}
         showsVerticalScrollIndicator={false}
+        ListHeaderComponent={() => (
+          <View>
+            {renderSubjectOverview()}
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Modules</Text>
+              <Text style={styles.sectionSubtitle}>Begin your learning journey</Text>
+            </View>
+          </View>
+        )}
       />
     </SafeAreaView>
   );
@@ -335,12 +372,97 @@ const styles = StyleSheet.create({
     padding: 20,
     paddingTop: 10,
   },
+  overviewCard: {
+    marginHorizontal: 5,
+    marginTop: 8,
+    marginBottom: 12,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 26,
+    borderWidth: 1,
+    borderColor: '#847c8cff',
+    shadowColor: '#000',
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 3,
+  },
+  overviewHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+  overviewTitle: {
+    fontFamily: Fonts.lexendDecaMedium,
+    fontSize: 28,
+    color: '#111827',
+    lineHeight: 34,
+    width: '100%',
+    flex: 1,
+  },
+  overviewTag: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 14,
+    backgroundColor: '#FEF3C7',
+    borderWidth: 1,
+    borderColor: '#F59E0B',
+    alignSelf: 'flex-start',
+    marginTop: 8,
+  },
+  overviewTagText: {
+    fontFamily: Fonts.poppinsMedium,
+    fontSize: 11,
+    color: '#9A3412',
+  },
+  overviewLabelsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 6,
+    marginBottom: 12,
+    paddingRight: 6,
+  },
+  overviewLabelText: {
+    fontFamily: Fonts.poppinsRegular,
+    fontSize: 11,
+    color: '#6B7280',
+  },
+  overviewIllustrationWrap: {
+    alignItems: 'center',
+    marginBottom: 12,
+    marginTop: 4,
+  },
+  overviewIllustrationCircle: {
+    width: 200,
+    height: 200,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  courseHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 4,
+  },
+  courseHeaderText: {
+    fontFamily: Fonts.poppinsMedium,
+    fontSize: 14,
+    color: '#A16207',
+  },
+  courseDescText: {
+    fontFamily: Fonts.poppinsRegular,
+    fontSize: 12,
+    color: '#4B5563',
+    lineHeight: 20,
+    marginTop: 6,
+  },
   card: {
     flexDirection: "row",
     borderRadius: 12,
+    marginHorizontal: 10,
     padding: 15,
-    marginTop: 15,
-    marginBottom: 16,
+    marginTop: 10,
+    marginBottom: 10,
     borderWidth: 1,
     borderColor: "#DBCFEA",
     shadowColor: "#000",

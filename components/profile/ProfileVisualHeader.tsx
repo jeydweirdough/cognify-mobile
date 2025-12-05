@@ -89,7 +89,7 @@ const ProfileVisualHeader = () => {
 // ... (Styles remain exactly the same as before)
 const styles = StyleSheet.create({
   visualHeaderContainer: {
-    backgroundColor: "#955FAE",
+    backgroundColor: "#3D365C",
     marginHorizontal: 20,
     marginTop: 20,
     marginBottom: 0,

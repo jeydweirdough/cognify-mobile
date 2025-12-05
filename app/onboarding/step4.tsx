@@ -15,10 +15,15 @@ const Colors = {
 };
 
 const AVATARS = [
-  { id: 1, color: '#F4D03F', source: require('@/assets/images/avatar1.jpg') },
-  { id: 2, color: '#F5B7B1', source: require('@/assets/images/avatar2.jpg') },
-  { id: 3, color: '#E67E22', source: require('@/assets/images/avatar3.jpg') },
-  { id: 4, color: '#EDBB99', source: require('@/assets/images/avatar4.jpg') },
+  { id: 1, color: '#F4D03F', source: require('@/assets/images/fm1.png') },
+  { id: 2, color: '#F5B7B1', source: require('@/assets/images/m1.png') },
+  { id: 3, color: '#E67E22', source: require('@/assets/images/fm2.png') },
+  { id: 4, color: '#EDBB99', source: require('@/assets/images/m2.png') },
+  { id: 5, color: '#EDBB99', source: require('@/assets/images/fm3.png') },
+  { id: 6, color: '#EDBB99', source: require('@/assets/images/m3.png') },
+  { id: 7, color: '#EDBB99', source: require('@/assets/images/fm4.png') },
+  { id: 8, color: '#EDBB99', source: require('@/assets/images/m4.png') },
+  { id: 9, color: '#EDBB99', source: require('@/assets/images/fm5.png') },
 ];
 
 export default function Step4() {
@@ -46,9 +51,9 @@ export default function Step4() {
         
         {/* Progress Bar (All active) */}
         <View style={styles.progressContainer}>
-          <View style={[styles.progressBar, { backgroundColor: Colors.primary }]} />
-          <View style={[styles.progressBar, { backgroundColor: Colors.primary }]} />
-          <View style={[styles.progressBar, { backgroundColor: Colors.primary }]} />
+          <View style={[styles.progressBar, styles.progressSpacer, { backgroundColor: Colors.primary }]} />
+          <View style={[styles.progressBar, styles.progressSpacer, { backgroundColor: Colors.primary }]} />
+          <View style={[styles.progressBar, styles.progressSpacer, { backgroundColor: Colors.primary }]} />
           <View style={[styles.progressBar, { backgroundColor: Colors.primary }]} />
         </View>
 
@@ -62,7 +67,6 @@ export default function Step4() {
           </Text>
         </View>
 
-        {/* Grid Options for Avatars */}
         <View style={styles.gridContainer}>
           {AVATARS.map((avatar) => {
             const isSelected = selected === avatar.id;
@@ -126,13 +130,15 @@ const styles = StyleSheet.create({
   progressContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
-    gap: 12,
     marginBottom: 50,
   },
   progressBar: {
     height: 10,
     width: 65,
     borderRadius: 5,
+  },
+  progressSpacer: {
+    marginRight: 12,
   },
   header: {
     alignItems: 'center',
@@ -157,17 +163,17 @@ const styles = StyleSheet.create({
   gridContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    justifyContent: 'center',
-    gap: 16,
+    justifyContent: 'space-between',
   },
   avatarCard: {
-    width: '45%', // Fits well with paddingHorizontal: 54
-    aspectRatio: 1, // Square
+    width: '30%',
+    aspectRatio: 1,
     borderRadius: 16,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 3,
     borderColor: 'transparent',
+    marginBottom: 12,
   },
   avatarSelected: {
     borderColor: Colors.primary,

@@ -15,7 +15,7 @@ export const AssessmentStartScreen = ({
   return (
     <View style={startStyles.container}>
       <Text style={startStyles.title}>
-        Let's Get Started{"\n"}with Your Diagnostic Assessment
+        Let’s Get Started{"\n"}with Your Diagnostic Assessment
       </Text>
       <View style={startStyles.illustrationContainer}>
         <Image

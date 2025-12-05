@@ -1,3 +1,4 @@
+import { router } from "expo-router";
 import React, { useEffect, useState } from "react";
 import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 // Assuming FONT_FAMILY and PRIMARY_COLOR are correctly imported
@@ -23,6 +24,33 @@ export default function RecommendedCard({
   const [localHasTaken, setLocalHasTaken] = useState(false);
   const [recommendedSubjects, setRecommendedSubjects] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const findSubjectIdForTitle = async (key: string): Promise<string | null> => {
+    try {
+      const items = await listSubjects();
+      const lower = String(key || "").toLowerCase();
+      for (const it of items as any[]) {
+        const id = String(it?.id ?? "");
+        const title = String(it?.title ?? "");
+        if (!id && !title) continue;
+        if (id === key) return id;
+        if (title && title.toLowerCase() === lower) return id || null;
+      }
+    } catch {}
+    try {
+      const s = await getSubjectTopics(String(key));
+      const sid = String(s?.id ?? "");
+      if (sid) return sid;
+    } catch {}
+    return null;
+  };
+
+  const navigateToSubject = async (title: string) => {
+    const id = await findSubjectIdForTitle(title);
+    if (id) {
+      router.push({ pathname: "/(app)/subject/[id]", params: { id, subjectTitle: title } });
+    }
+  };
 
   const resolveSubjectTitles = async (subjects: string[]) => {
     try {
@@ -192,7 +220,7 @@ export default function RecommendedCard({
               <TouchableOpacity
                 style={styles.recommendedCard}
                 activeOpacity={0.9}
-                onPress={onCardPress || (() => {})}
+                onPress={onCardPress || (() => navigateToSubject(subject))}
               >
                 <Text style={styles.sectionSubtitle}>Subject:</Text>
                 <View style={styles.recommendedContent}>

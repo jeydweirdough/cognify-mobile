@@ -12,6 +12,7 @@ export interface User {
   middle_name?: string;
   last_name?: string;
   role_id?: string;
+  profile_picture?: string | null;
 }
 
 interface AuthContextType {
@@ -89,6 +90,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         middle_name: profileData.middle_name,
         last_name: profileData.last_name,
         role_id: profileData.role_id,
+        profile_picture: profileData.profile_picture ?? null,
       });
     } catch (e: any) {
       console.error('Failed to fetch user profile:', e.response?.data || e.message);

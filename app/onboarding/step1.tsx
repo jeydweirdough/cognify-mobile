@@ -35,9 +35,9 @@ export default function Step1() {
         
         {/* Progress Bar */}
         <View style={styles.progressContainer}>
-          <View style={[styles.progressBar, { backgroundColor: Colors.primary }]} />
-          <View style={[styles.progressBar, { backgroundColor: '#E0E0E0' }]} />
-          <View style={[styles.progressBar, { backgroundColor: '#E0E0E0' }]} />
+          <View style={[styles.progressBar, styles.progressSpacer, { backgroundColor: Colors.primary }]} />
+          <View style={[styles.progressBar, styles.progressSpacer, { backgroundColor: '#E0E0E0' }]} />
+          <View style={[styles.progressBar, styles.progressSpacer, { backgroundColor: '#E0E0E0' }]} />
           <View style={[styles.progressBar, { backgroundColor: '#E0E0E0' }]} />
         </View>
 
@@ -49,13 +49,13 @@ export default function Step1() {
             Licensure Exam?
           </Text>
           <Text style={styles.subtitle}>
-            Don't worry, this isn't a test—just a quick check to personalize your review experience
+            Don’t worry, this isn’t a test—just a quick check to personalize your review experience
           </Text>
         </View>
 
         {/* Options */}
         <View style={styles.optionsContainer}>
-          {OPTIONS.map((option) => {
+          {OPTIONS.map((option, idx) => {
             const isSelected = selected === option.id;
             return (
               <TouchableOpacity
@@ -64,6 +64,7 @@ export default function Step1() {
                 style={[
                   styles.optionButton,
                   isSelected ? styles.optionSelected : styles.optionInactive,
+                  idx > 0 ? styles.optionSpacing : null,
                 ]}
                 onPress={() => setSelected(option.id)}
               >
@@ -114,14 +115,15 @@ const styles = StyleSheet.create({
   progressContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
-    gap: 12, // Slightly more gap between bars
-    // Increased space between bar and question
     marginBottom: 50, 
   },
   progressBar: {
     height: 10, // Thicker bar (was 6)
     width: 65,  // Slightly wider to match thickness
     borderRadius: 5,
+  },
+  progressSpacer: {
+    marginRight: 12,
   },
   // Header
   header: {
@@ -145,9 +147,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
   },
   // Options
-  optionsContainer: {
-    gap: 16,
-  },
+  optionsContainer: {},
   optionButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -155,6 +155,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     borderRadius: 30,
     borderWidth: 1,
+  },
+  optionSpacing: {
+    marginTop: 16,
   },
   optionInactive: {
     backgroundColor: '#FFFFFF',

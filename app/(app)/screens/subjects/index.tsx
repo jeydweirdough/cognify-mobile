@@ -195,7 +195,7 @@ export default function LearningScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
-        <MotivationCard />
+        {/* <MotivationCard /> */}
 
         <View style={styles.addSubjectButtonContainer}>
           <TouchableOpacity onPress={openModal} style={styles.addSubjectButton}>

@@ -3,6 +3,8 @@ import { storage } from './storage';
 import { Subject } from './types';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8000';
+// const API_URL = "http://192.168.1.14:8000";
+
 const TOKEN_KEY = 'cognify_token';
 const REFRESH_TOKEN_KEY = 'cognify_refresh_token';
 
@@ -124,7 +126,7 @@ export const getCurrentUserProfile = async () => {
 
 export const setDiagnosticStatus = async (taken: boolean) => {
   try {
-    await api.post('/users/me/diagnostic-status', { taken });
+    await api.post('/users', { taken });
   } catch (e) {
     return;
   }
@@ -180,19 +182,37 @@ export const submitDiagnosticSubmission = async (payload: DiagnosticSubmissionPa
 
 export const getDiagnosticRecommendations = async () => {
   try {
-    const r1 = await api.get('/users/me/diagnostic-recommendations');
-    return r1.data;
+    const profile = await getCurrentUserProfile();
+    const userId = String(
+      profile?.id ?? profile?.user_id ?? profile?.data?.id ?? profile?.data?.user_id ?? ''
+    );
+    if (userId) {
+      const analyticsRes = await getStudentReportAnalytics(userId);
+      const analytics = analyticsRes?.data ?? analyticsRes ?? {};
+      const perf = Array.isArray(analytics.subject_performance) ? analytics.subject_performance : [];
+      const subjectScores = perf.map((sp: any) => {
+        const sid = String(sp.subject_id ?? sp.subjectId ?? sp.subject ?? '');
+        const avg = Number(sp.average_score ?? sp.score ?? 0);
+        return { subject: sid, correct: isNaN(avg) ? 0 : avg, total: 100 };
+      });
+      const sorted = subjectScores.slice().sort((a: any, b: any) => (a.correct / a.total) - (b.correct / b.total));
+      const recommendedSubjects = sorted.slice(0, 2).map((s: any) => s.subject);
+      return { recommendedSubjects, subjectScores, source: 'analytics' };
+    }
   } catch {}
+
   try {
-    const r2 = await api.get('/profiles/me/diagnostic-recommendations');
-    return r2.data;
-  } catch {}
-  try {
-    const r3 = await api.get('/assessments/recommendations/me');
-    return r3.data;
-  } catch {}
-  const r4 = await api.get('/api/users/me/diagnostic-recommendations');
-  return r4.data;
+    const token = await storage.getItem(TOKEN_KEY);
+    if (!token) return {};
+    const profile = await getCurrentUserProfile();
+    const key = profile?.id ? `diagnostic_assessment_results:${profile.id}` : 'diagnostic_assessment_results';
+    const raw = await storage.getItem(key);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw);
+    return parsed;
+  } catch {
+    return {};
+  }
 };
 
 export const getStudentReportAnalytics = async (userId: string) => {

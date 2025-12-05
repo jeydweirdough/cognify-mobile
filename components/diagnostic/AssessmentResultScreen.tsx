@@ -35,12 +35,38 @@ export const AssessmentResultScreen: React.FC<AssessmentResultScreenProps> = ({
     for (let i = 0; i < s.length; i++) sum = (sum + s.charCodeAt(i)) % 1000;
     return SUBJECT_COLORS[sum % SUBJECT_COLORS.length];
   };
+  const initialLabel = (name: string) => {
+    const n = (name || "").toLowerCase();
+    if (n.includes("industrial") && n.includes("organizational")) return "I";
+    if (n.includes("psychological") && n.includes("assessment")) return "P";
+    if (n.includes("abnormal")) return "A";
+    if (n.includes("developmental")) return "D";
+    const words = (name || "").trim().split(/\s+/);
+    return (words[0]?.[0] || "S").toUpperCase();
+  };
   const normalized = subjectScores.map((s) => {
     const pct = Math.round((s.correct / Math.max(s.total, 1)) * 100);
-    const label = (s.subject?.[0] || "").toUpperCase();
+    const label = initialLabel(s.subject);
     const color = colorForSubject(s.subject);
     return { label, color, percent: isNaN(pct) ? 0 : pct };
   });
+
+  const readableName = (name: string) => {
+    const n = (name || "").toLowerCase();
+    if (n.includes("industrial") && n.includes("organizational")) return "I/O Psychology";
+    if (n.includes("psychological") && n.includes("assessment")) return "Psychological Assessment";
+    if (n.includes("abnormal")) return "Abnormal Psychology";
+    if (n.includes("developmental")) return "Developmental Psychology";
+    return name || "Subject";
+  };
+
+  const percEntries = subjectScores.map((s) => ({ name: readableName(s.subject), percent: Math.round((s.correct / Math.max(s.total, 1)) * 100) || 0 }));
+  const percValues = percEntries.map((e) => e.percent);
+  const maxVal = percValues.length ? Math.max(...percValues) : 0;
+  const minVal = percValues.length ? Math.min(...percValues) : 0;
+  const highestEntry = percEntries.find((e) => e.percent === maxVal) || { name: "—", percent: 0 };
+  const lowestEntries = percEntries.filter((e) => e.percent === minVal);
+  const lowestNamesArr = lowestEntries.map((e) => e.name);
 
   
 
@@ -50,18 +76,11 @@ export const AssessmentResultScreen: React.FC<AssessmentResultScreenProps> = ({
         <Text style={[styles.titleHeadline, { color: titleColor }]}>{titleText}</Text>
         <Text style={styles.titleSubtitle}>You answered {finalScore} out of {totalQuestions} questions correctly.</Text>
 
-        <Image source={require("@/assets/images/okay.png")} style={styles.emojiImage} />
+        <Image source={require("@/assets/images/cheer-up.gif")} style={styles.emojiImage} />
         <Text style={styles.captionText}>No worries! Every step is progress.</Text>
 
         <View style={styles.chartCard}>
           <View style={styles.chartInnerRow}>
-            <View style={styles.axisContainer}>
-              <View style={[styles.axisLabels, { height: MAX_BAR_HEIGHT }]}>
-                {[100, 75, 50, 25, 0].map((v) => (
-                  <Text key={`tick-${v}`} style={styles.axisLabel}>{v}</Text>
-                ))}
-              </View>
-            </View>
             <View style={styles.chartBarsRow}>
               {normalized.map((b, idx) => (
                 <View key={`${b.label}-${idx}`} style={styles.barItem}>
@@ -71,6 +90,14 @@ export const AssessmentResultScreen: React.FC<AssessmentResultScreenProps> = ({
               ))}
             </View>
           </View>
+        </View>
+
+        <View style={styles.analysisCard}>
+          <Text style={styles.analysisTitle}>Result Analysis</Text>
+          <Text style={styles.analysisText}>You got the highest at <Text style={styles.analysisSubject}>{highestEntry.name}</Text>.</Text>
+          <Text style={styles.analysisText}>You got the lowest {lowestNamesArr.length > 0 ? lowestNamesArr.map((n, idx) => (
+            <Text key={`low-${idx}`} style={styles.analysisSubject}>{n}{idx < lowestNamesArr.length - 1 ? ", " : ""}</Text>
+          )) : "—"}</Text>
         </View>
 
         <Pressable style={styles.reviewButton} onPress={onReviewPress}>
@@ -130,7 +157,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "flex-end",
     justifyContent: "flex-start",
-    gap: 8,
   },
   chartBarsRow: {
     flexDirection: "row",
@@ -151,17 +177,39 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#666",
   },
-  axisContainer: {
-    width: 26,
-    marginRight: 6,
+  analysisCard: {
+    borderWidth: 1,
+    borderColor: "#626776ff",
+    borderRadius: 16,
+    paddingHorizontal: 22,
+    paddingVertical: 16,
+    marginBottom: 20,
+    width: 260,
+    backgroundColor: "#FFF",
+    shadowColor: "#000",
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 3,
   },
-  axisLabels: {
-    justifyContent: "space-between",
+  analysisTitle: {
+    fontFamily: Fonts.poppinsMedium,
+    fontSize: 14,
+    color: "#6E3D84",
+    marginBottom: 10,
+    textAlign: "left",
   },
-  axisLabel: {
+  analysisText: {
     fontFamily: Fonts.poppinsRegular,
-    fontSize: 10,
-    color: "#999",
+    fontSize: 12.5,
+    color: "#333",
+    lineHeight: 20,
+    opacity: 0.85,
+  },
+  analysisSubject: {
+    fontFamily: Fonts.poppinsMedium,
+    fontWeight: 700,
+    color: "#992844ff",
   },
   reviewButton: {
     backgroundColor: "#6E3D84",

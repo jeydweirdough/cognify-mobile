@@ -2,16 +2,16 @@ import { Feather } from '@expo/vector-icons';
 import { Link } from 'expo-router';
 import { useRef, useState } from 'react';
 import {
-  ActivityIndicator,
-  Alert,
-  Pressable,
-  SafeAreaView,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View
+    ActivityIndicator,
+    Alert,
+    Pressable,
+    SafeAreaView,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View
 } from 'react-native';
 import { useAuth } from '../../lib/auth';
 
@@ -101,6 +101,9 @@ export default function SignUpScreen() {
         if (!email.trim()) {
             newErrors.email = 'Email is required';
             isValid = false;
+        } else if (!email.trim().toLowerCase().endsWith('@cvsu.edu.ph')) {
+            newErrors.email = 'Email must be a valid CVSU email (@cvsu.edu.ph)';
+            isValid = false;
         }
 
         // -- Password Validation --
@@ -132,7 +135,8 @@ export default function SignUpScreen() {
         setIsLoading(true);
         try {
             // --- UPDATED SIGNUP CALL WITH USERNAME ---
-            await signup(email, password, firstName, lastName, username);
+            const normalizedEmail = email.trim().toLowerCase();
+            await signup(normalizedEmail, password, firstName, lastName, username);
         } catch (e: any) {
             console.log("Signup Error:", e.response?.status, e.response?.data);
 

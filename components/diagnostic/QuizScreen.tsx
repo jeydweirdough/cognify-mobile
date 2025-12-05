@@ -78,12 +78,17 @@ export const QuizScreen: React.FC<QuizScreenProps> = ({
       <View style={styles.header}>
         <Pressable
           style={styles.backButton}
-          onPress={() =>
-            Alert.alert("Exit?", "Progress will be lost", [
-              { text: "Cancel" },
-              { text: "Exit", onPress: routerBack },
-            ])
-          }
+          onPress={() => {
+            Alert.alert(
+              "Exit Assessment",
+              "Progress will be lost. Do you want to exit?",
+              [
+                { text: "Cancel", style: "cancel" },
+                { text: "Exit", style: "destructive", onPress: routerBack },
+              ],
+              { cancelable: true }
+            );
+          }}
         >
           <Ionicons name="chevron-back" size={24} color="#FFF" />
         </Pressable>
@@ -133,6 +138,7 @@ export const QuizScreen: React.FC<QuizScreenProps> = ({
               name="time-outline"
               size={16}
               color={timeLeft < 120 ? "red" : themeColors.textSecondary} // Red warning at 2 mins
+              style={{ marginRight: 6 }}
             />
             <Text
               style={[
@@ -201,6 +207,7 @@ export const QuizScreen: React.FC<QuizScreenProps> = ({
                       ? themeColors.optionSelectedBg
                       : themeColors.optionBorder,
                   },
+                  index > 0 ? { marginTop: 12 } : null,
                 ]}
                 onPress={() => setSelectedOptionIndex(index)}
               >
@@ -212,6 +219,7 @@ export const QuizScreen: React.FC<QuizScreenProps> = ({
                         ? "#FFF"
                         : themeColors.textSecondary,
                     },
+                    styles.radioSpacing,
                   ]}
                 >
                   {isSelected && <View style={styles.radioFill} />}
@@ -246,7 +254,7 @@ export const QuizScreen: React.FC<QuizScreenProps> = ({
               ? "Submit Assessment"
               : "Next Question"}
           </Text>
-          <Ionicons name="arrow-forward" size={20} color="#FFF" />
+          <Ionicons name="arrow-forward" size={20} color="#FFF" style={{ marginLeft: 8 }} />
         </Pressable>
       </View>
     </SafeAreaView>
@@ -293,7 +301,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     borderRadius: 20,
     borderWidth: 1,
-    gap: 6,
   },
   timerText: { fontFamily: Fonts.poppinsMedium, fontSize: 14 },
   scrollContent: { paddingHorizontal: 24, paddingBottom: 120 },
@@ -342,14 +349,13 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginTop: 10,
   },
-  optionsContainer: { gap: 12 },
+  optionsContainer: {},
   optionCard: {
     flexDirection: "row",
     alignItems: "center",
     padding: 16,
     borderRadius: 12,
     borderWidth: 1,
-    gap: 12,
   },
   optionText: { fontFamily: Fonts.poppinsRegular, fontSize: 16, flex: 1 },
   radioCircle: {
@@ -374,13 +380,13 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 8,
     shadowColor: "#381E72",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 4,
   },
+  radioSpacing: { marginRight: 12 },
   disabledButton: {
     backgroundColor: "#B0B0B0",
     shadowOpacity: 0,

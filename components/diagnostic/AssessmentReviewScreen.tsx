@@ -98,7 +98,7 @@ export const AssessmentReviewScreen: React.FC<AssessmentReviewScreenProps> = ({
               {/* Display User's Incorrect Answer */}
               {!isCorrect && userAnswerIndex !== null && (
                 <View style={styles.reviewAnswerRow}>
-                  <Ionicons name="close-circle" size={24} color="#FF5252" />
+                  <Ionicons name="close-circle" size={24} color="#FF5252" style={{ marginRight: 10 }} />
                   <Text
                     style={[styles.reviewAnswerText, { color: "#FF5252" }]}
                   >
@@ -109,7 +109,7 @@ export const AssessmentReviewScreen: React.FC<AssessmentReviewScreenProps> = ({
 
               {/* Display Correct Answer */}
               <View style={styles.reviewAnswerRow}>
-                <Ionicons name="checkmark-circle" size={24} color="#2E7D32" />
+                <Ionicons name="checkmark-circle" size={24} color="#2E7D32" style={{ marginRight: 10 }} />
                 <Text
                   style={[
                     styles.reviewAnswerText,
@@ -224,7 +224,6 @@ const styles = StyleSheet.create({
   reviewAnswerRow: {
     flexDirection: "row",
     alignItems: "flex-start",
-    gap: 10,
     marginBottom: 8,
   },
   reviewAnswerText: {

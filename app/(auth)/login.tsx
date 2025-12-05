@@ -2,15 +2,15 @@ import { Feather } from '@expo/vector-icons';
 import { Link, useRouter } from 'expo-router'; // <--- 1. Import useRouter
 import { useRef, useState } from 'react';
 import {
-  ActivityIndicator,
-  Alert,
-  Pressable,
-  SafeAreaView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Alert,
+    Pressable,
+    SafeAreaView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 import { useAuth } from '../../lib/auth';
 
@@ -159,7 +159,7 @@ export default function LoginScreen() {
           </Pressable>
 
           <View style={styles.footer}>
-            <Text style={styles.footerText}>Don't have an account? </Text>
+            <Text style={styles.footerText}>Don’t have an account? </Text>
             <Link href="/(auth)/signup" asChild>
               <Pressable disabled={isLoading}>
                 <Text style={styles.signUpLink}>Sign up.</Text>
