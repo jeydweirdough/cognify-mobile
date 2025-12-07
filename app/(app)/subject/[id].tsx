@@ -24,11 +24,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-const FOLDER_COLORS = [
-  "#DDF6D2", 
-  "#F1E9FF", 
-  "#FFEFF2", 
-];
+const ACCENT_COLOR = Colors.primary;
 
  
 
@@ -49,16 +45,11 @@ export default function SubjectModulesScreen() {
   const [modules, setModules] = useState<ModuleListItem[]>([]);
   const [loading, setLoading] = useState(true); // 💡 EDITED: Start as true since we are now loading data
   const navigation = useNavigation();
-  const [colorOrder, setColorOrder] = useState<string[]>(FOLDER_COLORS);
+  const [colorOrder, setColorOrder] = useState<string[]>([]);
   const [subjectInfo, setSubjectInfo] = useState<{ title: string; description?: string; category?: string } | null>(null);
 
   useEffect(() => {
-    const arr = [...FOLDER_COLORS];
-    for (let i = arr.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [arr[i], arr[j]] = [arr[j], arr[i]];
-    }
-    setColorOrder(arr);
+    setColorOrder([]);
   }, [id]);
 
   // --- HIDE BOTTOM TABS ---
@@ -189,26 +180,22 @@ export default function SubjectModulesScreen() {
     // Show "Quiz Pending" if reading is capped at 90% but quiz not taken
     const showQuizPending = item.progress < 100 && item.progress >= 90; 
 
-    const folderColor = colorOrder[index % colorOrder.length];
+    const folderColor = "#FFFFFF";
 
     return (
       <Pressable
         style={[styles.card, { backgroundColor: folderColor }]}
         onPress={() => {
-          if (item.lectureContentUrl) {
-            router.push({
-              pathname: "/(app)/module/[id]",
-              params: {
-                id: item.id,
-                title: item.title,
-                author: item.author,
-                materialUrl: item.lectureContentUrl,
-              },
-            });
-          }
+          router.push({
+            pathname: "/(app)/module/[id]",
+            params: {
+              id: item.id,
+              subjectId: String(id),
+            },
+          });
         }}
       >
-        <View style={[styles.folderTab, { backgroundColor: folderColor }]} />
+        <View style={styles.leftAccent} />
         <View style={styles.checkboxContainer}>
           <View
             style={[styles.checkbox, isCompleted && styles.checkboxChecked]}
@@ -357,8 +344,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   headerTitle: {
+    fontFamily: Fonts.poppinsMedium,
     fontSize: 16,
-    fontWeight: "600",
     color: "#333",
     marginBottom: 0,
   },
@@ -458,29 +445,30 @@ const styles = StyleSheet.create({
   },
   card: {
     flexDirection: "row",
-    borderRadius: 12,
+    borderRadius: 14,
     marginHorizontal: 10,
-    padding: 15,
+    padding: 16,
     marginTop: 10,
     marginBottom: 10,
     borderWidth: 1,
-    borderColor: "#DBCFEA",
+    borderColor: "#E6E6E6",
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    elevation: 3,
+    position: "relative",
+    overflow: "hidden",
   },
-  folderTab: {
+  leftAccent: {
     position: "absolute",
-    top: -6,
-    left: 16,
-    width: 56,
-    height: 16,
-    borderTopLeftRadius: 6,
-    borderTopRightRadius: 6,
-    borderWidth: 1,
-    borderColor: "#DBCFEA",
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: 6,
+    backgroundColor: ACCENT_COLOR,
+    borderTopLeftRadius: 14,
+    borderBottomLeftRadius: 14,
   },
   checkboxContainer: {
     marginRight: 12,
@@ -497,8 +485,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   checkboxChecked: {
-    backgroundColor: "#B71C1C",
-    borderColor: "#B71C1C",
+    backgroundColor: ACCENT_COLOR,
+    borderColor: ACCENT_COLOR,
   },
   contentContainer: {
     flex: 1,
@@ -529,7 +517,7 @@ const styles = StyleSheet.create({
   },
   progressBarFill: {
     height: 6,
-    backgroundColor: "#D88C85",
+    backgroundColor: ACCENT_COLOR,
     borderRadius: 3,
   },
   quizPendingText: {

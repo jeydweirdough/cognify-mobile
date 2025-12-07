@@ -1,25 +1,31 @@
+import { getModuleById } from '@/lib/api';
 import { Feather, Ionicons } from '@expo/vector-icons';
 import { router, Stack, useLocalSearchParams, useNavigation } from 'expo-router';
-import React, { useLayoutEffect, useRef, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import {
   Dimensions,
-  Image,
   NativeScrollEvent,
   NativeSyntheticEvent,
+  Platform,
   Pressable,
   SafeAreaView,
   ScrollView,
   StatusBar,
   StyleSheet,
   Text,
-  View
+  View,
 } from 'react-native';
 import { Fonts } from '../../../constants/cognify-theme';
 
 const { width } = Dimensions.get('window');
 
 export default function ModuleReadingScreen() {
-  const { id, title, author, coverUrl } = useLocalSearchParams<{ id: string, title: string, author: string, coverUrl: string }>();
+  const { id, subjectId } = useLocalSearchParams<{ id: string; subjectId?: string }>();
+  const [moduleTitle, setModuleTitle] = useState<string>('');
+  const [moduleAuthor, setModuleAuthor] = useState<string>('');
+  const [moduleInputType, setModuleInputType] = useState<string>('');
+  const [moduleMaterialUrl, setModuleMaterialUrl] = useState<string>('');
+  const [moduleContent, setModuleContent] = useState<string>('');
   const navigation = useNavigation();
 
   // --- THEME STATE ---
@@ -44,6 +50,30 @@ export default function ModuleReadingScreen() {
       });
     };
   }, [navigation]);
+
+  useEffect(() => {
+    let mounted = true;
+    const run = async () => {
+      if (!id) return;
+      try {
+        const mod = await getModuleById(String(id));
+        const t = String(mod?.title ?? '');
+        const a = String(mod?.purpose ?? mod?.author ?? mod?.description ?? '');
+        const it = String(mod?.input_type ?? '');
+        const mu = String(mod?.material_url ?? '');
+        const ct = String(mod?.content ?? '');
+        if (mounted) {
+          if (t) setModuleTitle(t);
+          if (a) setModuleAuthor(a);
+          if (it) setModuleInputType(it);
+          if (mu) setModuleMaterialUrl(mu);
+          if (ct) setModuleContent(ct);
+        }
+      } catch {}
+    };
+    run();
+    return () => { mounted = false; };
+  }, [id]);
 
   // --- SCROLL HANDLER ---
   const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
@@ -88,15 +118,12 @@ export default function ModuleReadingScreen() {
     footerBorder: isDarkMode ? '#333333' : '#F0F0F0',
   };
 
-  const contentText = `Lorem ipsum dolor sit amet, consectetur adipiscing elit. Quisque ac accumsan metus. Praesent id magna iaculis, sodales massa non, congue lacus. Curabitur a consequat nisi. Nulla tortor eros, condimentum ac libero et, cursus dapibus lacus. Nullam lacinia, leo ac mattis porttitor, dolor urna lacinia nisl, ullamcorper aliquam odio dolor sit amet turpis. Vestibulum a orci ut metus vehicula fermentum.
-
-Duis tempus gravida metus blandit bibendum. Duis commodo sapien ut gravida volutpat. Phasellus non viverra ante. Curabitur et enim sem. Quisque vulputate hendrerit massa, non iaculis nisi tincidunt id. Sed aliquet, sapien eget suscipit tempus, sem orci convallis nibh, at pharetra leo dui et elit.
-
-Sed auctor imperdiet tellus sit amet mollis. Sed ipsum purus, elementum a leo vel, feugiat lacinia ex. Aliquam at condimentum augue. Class aptent taciti sociosqu ad litora torquent per conubia nostra, per inceptos himenaeos. Suspendisse pulvinar rutrum leo, eu condimentum massa facilisis et. In at tortor id mauris blandit tempor sit amet neque.
-
-Vivamus eget felis sodales, dictum finibus urna. Vivamus eget felis sodales, dictum finibus urna.
-
-Suspendisse pulvinar rutrum leo, eu condimentum massa facilisis et. In at tortor id mauris blandit tempor sit amet neque. Vivamus eget felis sodales, dictum finibus urna. Vivamus eget felis sodales, dictum finibus urna.`;
+  const inputType = moduleInputType?.toLowerCase();
+  const isPdf = inputType === 'pdf' || (!inputType && moduleMaterialUrl?.toLowerCase().endsWith('.pdf'));
+  const pdfSource = moduleMaterialUrl ? { uri: moduleMaterialUrl } : undefined;
+  const PdfComponent = Platform.OS !== 'web' ? (() => {
+    try { return require('react-native-pdf').default; } catch { return null; }
+  })() : null;
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: themeColors.background }]}>
@@ -108,7 +135,11 @@ Suspendisse pulvinar rutrum leo, eu condimentum massa facilisis et. In at tortor
         <Pressable
           style={styles.backButton}
           onPress={() => {
-            router.navigate('/(app)/subject/[id]');
+            if (subjectId) {
+              router.push({ pathname: '/(app)/subject/[id]', params: { id: String(subjectId) } });
+            } else {
+              router.back();
+            }
           }}
         >
           <Ionicons name="chevron-back" size={24} color="#FFF" />
@@ -131,43 +162,47 @@ Suspendisse pulvinar rutrum leo, eu condimentum massa facilisis et. In at tortor
         onScroll={handleScroll}
         scrollEventThrottle={16}
       >
-        <View style={styles.imageContainer}>
-          <Image
-            source={{ uri: (coverUrl as string) || "https://covers.openlibrary.org/b/id/8235112-L.jpg" }}
-            style={styles.bookCover}
-            resizeMode="cover"
-          />
-        </View>
-
         <Text style={[styles.title, { color: themeColors.textPrimary }]}>
-          {title || "Introduction to Industrial and Organizational Psychology"}
+          {moduleTitle || 'Module'}
         </Text>
-        <Text style={[styles.author, { color: themeColors.textSecondary }]}>
-          {author || "Ronald E. Riggo"}
-        </Text>
+        {moduleAuthor ? (
+          <Text style={[styles.author, { color: themeColors.textSecondary }]}>
+            {moduleAuthor}
+          </Text>
+        ) : null}
 
-        <Text style={[styles.text, { color: themeColors.textBody }]}>
-          {contentText}
-        </Text>
+        {isPdf && pdfSource ? (
+          Platform.OS === 'web' ? (
+            <View style={{ height: width * 1.2, borderRadius: 8, overflow: 'hidden' }}>
+              {moduleMaterialUrl ? (
+                <iframe
+                  src={`https://docs.google.com/gview?embedded=true&url=${encodeURIComponent(moduleMaterialUrl)}`}
+                  style={{ width: '100%', height: '100%', border: 'none' } as any}
+                />
+              ) : null}
+            </View>
+          ) : (
+            <View style={{ height: width * 1.2, borderRadius: 8, overflow: 'hidden' }}>
+              <PdfComponent
+                source={pdfSource}
+                trustAllCerts
+                style={{ flex: 1 }}
+              />
+            </View>
+          )
+        ) : (
+          <Text style={[styles.text, { color: themeColors.textBody }]}>
+            {moduleContent || 'No content available.'}
+          </Text>
+        )}
 
-        {/* Quiz Section */}
+        {/* Quiz Section (kept optional, can be removed if unwanted) */}
         <View style={[
           styles.quizSection,
           { backgroundColor: themeColors.quizBg, borderColor: themeColors.quizBorder }
         ]}>
-          <Text style={[styles.quizPrompt, { color: themeColors.textBody }]}>
-            Finished reading? Test your knowledge to complete this module.
-          </Text>
-          <Pressable
-            style={styles.quizButton}
-            onPress={() => {
-              // Navigate to the quiz page, passing the module ID
-              router.push({
-                pathname: '/(app)/quiz/[id]', // Make sure this matches your file structure
-                params: { id: id }
-              });
-            }}
-          >
+          <Text style={[styles.quizPrompt, { color: themeColors.textBody }]}>Finished reading? Test your knowledge to complete this module.</Text>
+          <Pressable style={styles.quizButton} onPress={() => router.push({ pathname: '/(app)/quiz/[id]', params: { id: id } })}>
             <Text style={styles.quizButtonText}>Take Quiz</Text>
             <Ionicons name="arrow-forward" size={20} color="#FFF" />
           </Pressable>
@@ -235,35 +270,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingBottom: 20,
   },
-  imageContainer: {
-    alignItems: 'center',
-    marginVertical: 24,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.25,
-    shadowRadius: 10,
-    elevation: 8,
-  },
-  bookCover: {
-    width: width * 0.45,
-    height: width * 0.45 * 1.4,
-    borderRadius: 8,
-  },
   title: {
-    fontFamily: Fonts.bold,
+    fontFamily: Fonts.poppinsMedium,
     fontSize: 20,
     textAlign: 'center',
     marginBottom: 8,
     lineHeight: 26,
   },
   author: {
-    fontFamily: Fonts.regular,
+    fontFamily: Fonts.poppinsRegular,
     fontSize: 15,
     textAlign: 'center',
     marginBottom: 30,
   },
   text: {
-    fontFamily: Fonts.regular,
+    fontFamily: Fonts.poppinsRegular,
     fontSize: 17,
     lineHeight: 30,
     textAlign: 'justify',
@@ -278,7 +299,7 @@ const styles = StyleSheet.create({
     // Colors handled dynamically
   },
   quizPrompt: {
-    fontFamily: Fonts.regular,
+    fontFamily: Fonts.poppinsRegular,
     fontSize: 15,
     textAlign: 'center',
     marginBottom: 16,
@@ -300,7 +321,7 @@ const styles = StyleSheet.create({
   },
   quizButtonText: {
     color: '#FFF',
-    fontFamily: Fonts.bold,
+    fontFamily: Fonts.poppinsMedium,
     fontSize: 16,
   },
 
@@ -328,7 +349,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   progressText: {
-    fontFamily: Fonts.semiBold,
+    fontFamily: Fonts.poppinsMedium,
     fontSize: 12,
     // Color handled dynamically
   },

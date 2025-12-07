@@ -1,8 +1,10 @@
 import axios from 'axios';
+import { Platform } from 'react-native';
 import { storage } from './storage';
 import { Subject } from './types';
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8000';
+const DEFAULT_LOCAL_API = Platform.OS === 'android' ? 'http://10.0.2.2:8000' : 'http://localhost:8000';
+const API_URL = process.env.EXPO_PUBLIC_API_URL || DEFAULT_LOCAL_API;
 // const API_URL = "http://192.168.1.14:8000";
 
 const TOKEN_KEY = 'cognify_token';
@@ -111,10 +113,38 @@ export const getSubjectTopics = async (subjectId: string) => {
 
 export { api, API_URL, REFRESH_TOKEN_KEY, TOKEN_KEY };
 export const getDiagnosticAssessmentQuestions = async () => {
-  const response = await api.get('/assessments/');
-  const data = response.data;
-  if (Array.isArray(data)) return data;
-  return data?.assessments ?? data?.items ?? [];
+  const normalize = (data: any) => {
+    if (Array.isArray(data)) return data;
+    const candidates = [data?.assessments, data?.items, data?.data, data?.results];
+    for (const c of candidates) {
+      if (Array.isArray(c)) return c;
+    }
+    if (Array.isArray(data?.questions)) return [data];
+    return [];
+  };
+
+  const endpoints = [
+    '/assessments/',
+    '/assessments/diagnostic',
+    '/assessments/diagnostic/',
+    '/assessments/diagnostic/questions',
+    '/api/assessments/diagnostic',
+  ];
+
+  for (const ep of endpoints) {
+    try {
+      const r = await api.get(ep);
+      const norm = normalize(r.data);
+      if (norm.length) return norm;
+    } catch {}
+  }
+
+  try {
+    const r = await api.get('/assessments/');
+    return normalize(r.data);
+  } catch {
+    return [];
+  }
 };
 
 export const getCurrentUserProfile = async () => {
@@ -232,4 +262,9 @@ export const listModulesBySubject = async (subjectId: string) => {
   const data = r.data;
   if (Array.isArray(data)) return data;
   return data?.modules ?? data?.items ?? [];
+};
+
+export const getModuleById = async (moduleId: string) => {
+  const r = await api.get(`/modules/${moduleId}`);
+  return r.data;
 };

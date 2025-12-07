@@ -12,9 +12,8 @@ export const Colors = {
 
 // **Updated Fonts Object**
 export const Fonts = {
-  // Poppins
-  poppinsRegular: 'Poppins-Regular',
-  poppinsMedium: 'Poppins-Medium',
+  poppinsRegular: 'Poppins_400Regular',
+  poppinsMedium: 'Poppins_600SemiBold',
 
   // Lexend Deca
   lexendDecaRegular: 'LexendDeca-Regular',
@@ -31,6 +30,5 @@ export const PRIMARY_COLOR = "#3E1E68";
 export const ACCENT_COLOR = "#000000ff";
 export const BACKGROUND_COLOR = "#FFFFFF";
 
-// Using the new aliases/names from the Fonts object
-export const FONT_FAMILY = Fonts.lexendDecaMedium;
-export const FONT_FAMILY_REGULAR = Fonts.lexendDecaRegular;
+export const FONT_FAMILY = Fonts.poppinsMedium;
+export const FONT_FAMILY_REGULAR = Fonts.poppinsRegular;

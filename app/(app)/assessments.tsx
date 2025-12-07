@@ -247,9 +247,10 @@ export default function AssessmentsScreen() {
 
       // Fetch diagnostic assessment questions
       const items: any[] = await getDiagnosticAssessmentQuestions();
-      const diagnostics = items.filter(
-        (a) => (a?.purpose ?? a?.type) === "Diagnostic"
-      );
+      const diagnostics = items.filter((a) => {
+        const t = String(a?.purpose ?? a?.type ?? a?.category ?? a?.name ?? '').toLowerCase();
+        return t.includes('diagnostic') || Array.isArray(a?.questions);
+      });
 
       const questions: QuestionData[] = [];
       
@@ -340,6 +341,7 @@ export default function AssessmentsScreen() {
         setIsQuizFinished(false);
         setIsReviewing(false);
         setTimeLeft(INITIAL_TIME_SECONDS);
+        setIsQuizStarted(true);
       } else {
         Alert.alert("No Questions", "No diagnostic questions found.");
         router.back();
@@ -347,8 +349,6 @@ export default function AssessmentsScreen() {
     } catch (error) {
       console.error("Error loading assessment:", error);
       Alert.alert("Error", "Failed to load assessment questions.");
-    } finally {
-      setIsQuizStarted(true);
     }
   };
 

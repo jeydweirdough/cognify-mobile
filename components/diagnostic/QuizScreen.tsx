@@ -1,7 +1,8 @@
 // @/components/diagnostic/QuizScreen.tsx
 
 import { Feather, Ionicons } from "@expo/vector-icons";
-import React from "react";
+import React, { useEffect } from "react";
+import type { DimensionValue } from "react-native";
 import {
   Alert,
   Pressable,
@@ -12,6 +13,17 @@ import {
   Text,
   View,
 } from "react-native";
+import Animated, {
+  FadeIn,
+  FadeOut,
+  Layout,
+  SlideInDown,
+  SlideInRight,
+  useAnimatedStyle,
+  useSharedValue,
+  withSequence,
+  withTiming
+} from "react-native-reanimated";
 // Assuming Fonts import is available from parent context/structure
 import { Fonts } from "../../constants/cognify-theme";
 
@@ -69,13 +81,27 @@ export const QuizScreen: React.FC<QuizScreenProps> = ({
   setIsDarkMode,
   routerBack,
 }) => {
+  const progressSV = useSharedValue(progressPercent);
+  const timerScale = useSharedValue(1);
+  const progressAnimatedStyle = useAnimatedStyle(() => ({ width: (progressSV.value + "%") as DimensionValue }));
+  const timerAnimatedStyle = useAnimatedStyle(() => ({ transform: [{ scale: timerScale.value }] }));
+
+  useEffect(() => {
+    progressSV.value = withTiming(progressPercent, { duration: 300 });
+  }, [progressPercent]);
+
+  useEffect(() => {
+    if (timeLeft <= 120) {
+      timerScale.value = withSequence(withTiming(1.06, { duration: 180 }), withTiming(1, { duration: 180 }));
+    }
+  }, [timeLeft]);
   return (
     <SafeAreaView
       style={[styles.container, { backgroundColor: themeColors.background }]}
     >
       <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} />
 
-      <View style={styles.header}>
+      <Animated.View style={styles.header} entering={FadeIn}>
         <Pressable
           style={styles.backButton}
           onPress={() => {
@@ -92,7 +118,8 @@ export const QuizScreen: React.FC<QuizScreenProps> = ({
         >
           <Ionicons name="chevron-back" size={24} color="#FFF" />
         </Pressable>
-        <Text style={[styles.headerTitle, { color: themeColors.textPrimary }]}>
+        <Text style={[styles.headerTitle, { color: themeColors.textPrimary }]}
+        >
           Diagnostic Assessment
         </Text>
         <Pressable
@@ -105,7 +132,7 @@ export const QuizScreen: React.FC<QuizScreenProps> = ({
             color={themeColors.textPrimary}
           />
         </Pressable>
-      </View>
+      </Animated.View>
 
       <View style={styles.fixedTopContainer}>
         <View style={styles.progressContainer}>
@@ -115,23 +142,21 @@ export const QuizScreen: React.FC<QuizScreenProps> = ({
               { backgroundColor: isDarkMode ? "#333" : "#E0E0E0" },
             ]}
           >
-            <View
-              style={[
-                styles.progressBarFill,
-                { width: `${progressPercent}%` },
-              ]}
+            <Animated.View
+              style={[styles.progressBarFill, progressAnimatedStyle]}
             />
           </View>
         </View>
 
         <View style={styles.timerContainer}>
-          <View
+          <Animated.View
             style={[
               styles.timerPill,
               {
                 backgroundColor: themeColors.cardBg,
                 borderColor: themeColors.optionBorder,
               },
+              timerAnimatedStyle,
             ]}
           >
             <Ionicons
@@ -148,28 +173,29 @@ export const QuizScreen: React.FC<QuizScreenProps> = ({
             >
               {formatTime(timeLeft)}
             </Text>
-          </View>
+          </Animated.View>
         </View>
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {/* Subject Card (Conditional Display) */}
         {isSubjectStart && currentQuestion?.subject && (
-          <View
+          <Animated.View
             style={[
               styles.subjectCard,
               {
                 backgroundColor: themeColors.optionSelectedBg,
               },
             ]}
+            entering={SlideInDown}
           >
             <Text style={styles.subjectCardText}>
               {currentQuestion?.subject}
             </Text>
-          </View>
+          </Animated.View>
         )}
 
-        <View
+        <Animated.View
           style={[
             styles.questionCard,
             {
@@ -177,6 +203,10 @@ export const QuizScreen: React.FC<QuizScreenProps> = ({
               borderColor: themeColors.questionCardBorder,
             },
           ]}
+          entering={FadeIn}
+          exiting={FadeOut}
+          layout={Layout}
+          key={currentQuestion?.id}
         >
           <Text style={[styles.questionCounter, { color: "#333" }]}>
             Question {currentQuestionIndex + 1} of {QUIZ_DATA_LENGTH}
@@ -189,50 +219,51 @@ export const QuizScreen: React.FC<QuizScreenProps> = ({
           >
             {currentQuestion?.question ?? ""}
           </Text>
-        </View>
+        </Animated.View>
 
         <View style={styles.optionsContainer}>
           {(currentQuestion?.options ?? []).map((option, index) => {
             const isSelected = selectedOptionIndex === index;
             return (
-              <Pressable
-                key={index}
-                style={[
-                  styles.optionCard,
-                  {
-                    backgroundColor: isSelected
-                      ? themeColors.optionSelectedBg
-                      : themeColors.cardBg,
-                    borderColor: isSelected
-                      ? themeColors.optionSelectedBg
-                      : themeColors.optionBorder,
-                  },
-                  index > 0 ? { marginTop: 12 } : null,
-                ]}
-                onPress={() => setSelectedOptionIndex(index)}
-              >
-                <View
+              <Animated.View key={index} entering={SlideInRight} layout={Layout}>
+                <Pressable
                   style={[
-                    styles.radioCircle,
+                    styles.optionCard,
                     {
+                      backgroundColor: isSelected
+                        ? themeColors.optionSelectedBg
+                        : themeColors.cardBg,
                       borderColor: isSelected
-                        ? "#FFF"
-                        : themeColors.textSecondary,
+                        ? themeColors.optionSelectedBg
+                        : themeColors.optionBorder,
                     },
-                    styles.radioSpacing,
+                    index > 0 ? { marginTop: 12 } : null,
                   ]}
+                  onPress={() => setSelectedOptionIndex(index)}
                 >
-                  {isSelected && <View style={styles.radioFill} />}
-                </View>
-                <Text
-                  style={[
-                    styles.optionText,
-                    { color: isSelected ? "#FFF" : themeColors.textPrimary },
-                  ]}
-                >
-                  {option}
-                </Text>
-              </Pressable>
+                  <View
+                    style={[
+                      styles.radioCircle,
+                      {
+                        borderColor: isSelected
+                          ? "#FFF"
+                          : themeColors.textSecondary,
+                      },
+                      styles.radioSpacing,
+                    ]}
+                  >
+                    {isSelected && <View style={styles.radioFill} />}
+                  </View>
+                  <Text
+                    style={[
+                      styles.optionText,
+                      { color: isSelected ? "#FFF" : themeColors.textPrimary },
+                    ]}
+                  >
+                    {option}
+                  </Text>
+                </Pressable>
+              </Animated.View>
             );
           })}
         </View>
