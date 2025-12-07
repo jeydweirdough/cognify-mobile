@@ -225,8 +225,6 @@ export default function SubjectModulesScreen() {
             </View>
             {showQuizPending ? (
               <Text style={styles.quizPendingText}>Quiz Pending</Text>
-            ) : !item.lectureContentUrl ? (
-              <Text style={styles.quizPendingText}>No material uploaded</Text>
             ) : null}
           </View>
         </View>

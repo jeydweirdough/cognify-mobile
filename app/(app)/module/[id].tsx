@@ -1,4 +1,4 @@
-import { getModuleById } from '@/lib/api';
+import { getModuleById, hasTakenAssessment, listAssessmentsByModule, updateModuleProgress } from '@/lib/api';
 import { Feather, Ionicons } from '@expo/vector-icons';
 import { router, Stack, useLocalSearchParams, useNavigation } from 'expo-router';
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
@@ -15,6 +15,7 @@ import {
   Text,
   View,
 } from 'react-native';
+import RenderHtml from 'react-native-render-html';
 import { Fonts } from '../../../constants/cognify-theme';
 
 const { width } = Dimensions.get('window');
@@ -26,6 +27,9 @@ export default function ModuleReadingScreen() {
   const [moduleInputType, setModuleInputType] = useState<string>('');
   const [moduleMaterialUrl, setModuleMaterialUrl] = useState<string>('');
   const [moduleContent, setModuleContent] = useState<string>('');
+  const [hasVerifiedAssessment, setHasVerifiedAssessment] = useState(false);
+  const [assessmentId, setAssessmentId] = useState<string>('');
+  const [hasTakenThisAssessment, setHasTakenThisAssessment] = useState(false);
   const navigation = useNavigation();
 
   // --- THEME STATE ---
@@ -38,6 +42,7 @@ export default function ModuleReadingScreen() {
 
   const [readingProgress, setReadingProgress] = useState(initialProgress);
   const maxProgressRef = useRef(initialProgress);
+  const lastSavedPctRef = useRef(Math.round(initialProgress * 100));
 
   // --- HIDE BOTTOM TABS ---
   useLayoutEffect(() => {
@@ -70,6 +75,22 @@ export default function ModuleReadingScreen() {
           if (ct) setModuleContent(ct);
         }
       } catch {}
+      try {
+        const assessments = await listAssessmentsByModule(String(id));
+        const first = Array.isArray(assessments) ? assessments[0] : undefined;
+        if (mounted) {
+          const exists = !!first;
+          setHasVerifiedAssessment(exists);
+          const aid = String(first?.id ?? '');
+          setAssessmentId(aid);
+          if (aid) {
+            try {
+              const ok = await hasTakenAssessment(aid);
+              setHasTakenThisAssessment(!!ok);
+            } catch {}
+          }
+        }
+      } catch {}
     };
     run();
     return () => { mounted = false; };
@@ -88,8 +109,7 @@ export default function ModuleReadingScreen() {
     if (scrollableHeight > 0) {
       const currentRawProgress = scrollY / scrollableHeight;
 
-      // Cap at 90%
-      const cappedProgress = Math.min(currentRawProgress, 0.90);
+    const cappedProgress = Math.min(currentRawProgress, 1);
 
       // Monotonic Check (Don't go backwards)
       if (cappedProgress > maxProgressRef.current) {
@@ -99,16 +119,33 @@ export default function ModuleReadingScreen() {
         // Save to Global Store for the list view
         if (!(global as any).MODULE_PROGRESS) (global as any).MODULE_PROGRESS = {};
         (global as any).MODULE_PROGRESS[id] = cappedProgress * 100;
+
+        const pctInt = Math.round(cappedProgress * 100);
+        if (pctInt - lastSavedPctRef.current >= 5) {
+          lastSavedPctRef.current = pctInt;
+          const st = pctInt >= 100 ? 'completed' : 'in_progress';
+          updateModuleProgress(String(id), subjectId ? String(subjectId) : undefined, pctInt, st).catch(() => {});
+        }
       }
     }
   };
+
+  useEffect(() => {
+    return () => {
+      try {
+        const pctInt = Math.round(maxProgressRef.current * 100);
+        const st = pctInt >= 100 ? 'completed' : 'in_progress';
+        updateModuleProgress(String(id), subjectId ? String(subjectId) : undefined, pctInt, st).catch(() => {});
+      } catch {}
+    };
+  }, [id, subjectId]);
 
   // --- THEME HELPERS ---
   const toggleTheme = () => setIsDarkMode(!isDarkMode);
 
   // Dynamic Colors based on state
   const themeColors = {
-    background: isDarkMode ? '#121212' : '#F8F9FA',
+    background: isDarkMode ? '#1c1c1cff' : '#ffffffff',
     textPrimary: isDarkMode ? '#FFFFFF' : '#000000',
     textSecondary: isDarkMode ? '#B0B0B0' : '#666666',
     textBody: isDarkMode ? '#E0E0E0' : '#2D2D2D',
@@ -124,6 +161,54 @@ export default function ModuleReadingScreen() {
   const PdfComponent = Platform.OS !== 'web' ? (() => {
     try { return require('react-native-pdf').default; } catch { return null; }
   })() : null;
+
+  const tagsStyles = {
+    body: {
+      color: themeColors.textBody,
+      fontFamily: Fonts.poppinsRegular,
+      fontSize: 17,
+      lineHeight: 30,
+      textAlign: 'justify' as const,
+    },
+    p: {
+      marginBottom: 16,
+      textAlign: 'justify' as const,
+    },
+    h1: {
+      fontSize: 26,
+      fontFamily: Fonts.poppinsMedium,
+      color: themeColors.textPrimary,
+      marginTop: 5,
+      marginBottom: 5,
+    },
+    h2: {
+      fontSize: 22,
+      fontFamily: Fonts.poppinsMedium,
+      color: themeColors.textPrimary,
+      marginTop: 5,
+      marginBottom: 5,
+    },
+    ul: {
+      marginLeft: 20,
+      marginBottom: 16,
+    },
+    ol: {
+      marginLeft: 20,
+      marginBottom: 16,
+    },
+    li: {
+      marginBottom: 8,
+    },
+    blockquote: {
+      borderLeftWidth: 3,
+      borderLeftColor: isDarkMode ? '#555' : '#e5e7eb',
+      paddingLeft: 12,
+      marginLeft: 4,
+      marginBottom: 16,
+      fontStyle: 'italic' as const,
+      color: isDarkMode ? '#bbb' : '#6b7280',
+    },
+  };
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: themeColors.background }]}>
@@ -191,22 +276,26 @@ export default function ModuleReadingScreen() {
             </View>
           )
         ) : (
-          <Text style={[styles.text, { color: themeColors.textBody }]}>
-            {moduleContent || 'No content available.'}
-          </Text>
+          <RenderHtml
+            contentWidth={width - 48}
+            source={{ html: moduleContent || '<p>No content available.</p>' }}
+            tagsStyles={tagsStyles}
+            baseStyle={{ fontFamily: Fonts.poppinsRegular }}
+          />
         )}
 
-        {/* Quiz Section (kept optional, can be removed if unwanted) */}
-        <View style={[
-          styles.quizSection,
-          { backgroundColor: themeColors.quizBg, borderColor: themeColors.quizBorder }
-        ]}>
-          <Text style={[styles.quizPrompt, { color: themeColors.textBody }]}>Finished reading? Test your knowledge to complete this module.</Text>
-          <Pressable style={styles.quizButton} onPress={() => router.push({ pathname: '/(app)/quiz/[id]', params: { id: id } })}>
-            <Text style={styles.quizButtonText}>Take Quiz</Text>
-            <Ionicons name="arrow-forward" size={20} color="#FFF" />
-          </Pressable>
-        </View>
+        {hasVerifiedAssessment && (
+          <View style={[
+            styles.quizSection,
+            { backgroundColor: themeColors.quizBg, borderColor: themeColors.quizBorder }
+          ]}>
+            <Text style={[styles.quizPrompt, { color: themeColors.textBody }]}>Finished reading? Test your knowledge.</Text>
+            <Pressable style={styles.quizButton} onPress={() => router.push({ pathname: '/(app)/quiz/[id]', params: { id: assessmentId || id } })}>
+              <Text style={styles.quizButtonText}>{hasTakenThisAssessment ? 'Retake Quiz' : 'Take Assessment'}</Text>
+              <Ionicons name="arrow-forward" size={20} color="#FFF" />
+            </Pressable>
+          </View>
+        )}
 
         {/* Extra spacer */}
         <View style={{ height: 120 }} />
@@ -219,9 +308,7 @@ export default function ModuleReadingScreen() {
       ]}>
         <View style={styles.progressInfo}>
           <Text style={[styles.progressText, { color: isDarkMode ? '#A38FDB' : '#381E72' }]}>
-            {readingProgress >= 0.9
-              ? "90% (Quiz Pending)"
-              : `${Math.round(readingProgress * 100)}% Read`}
+            {`${Math.round(readingProgress * 100)}% Read`}
           </Text>
         </View>
         <View style={[styles.progressBarTrack, { backgroundColor: isDarkMode ? '#333' : '#F0F0F0' }]}>
@@ -282,12 +369,6 @@ const styles = StyleSheet.create({
     fontSize: 15,
     textAlign: 'center',
     marginBottom: 30,
-  },
-  text: {
-    fontFamily: Fonts.poppinsRegular,
-    fontSize: 17,
-    lineHeight: 30,
-    textAlign: 'justify',
   },
   // --- Quiz Section ---
   quizSection: {

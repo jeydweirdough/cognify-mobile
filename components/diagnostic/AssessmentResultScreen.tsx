@@ -94,10 +94,8 @@ export const AssessmentResultScreen: React.FC<AssessmentResultScreenProps> = ({
 
         <View style={styles.analysisCard}>
           <Text style={styles.analysisTitle}>Result Analysis</Text>
-          <Text style={styles.analysisText}>You got the highest at <Text style={styles.analysisSubject}>{highestEntry.name}</Text>.</Text>
-          <Text style={styles.analysisText}>You got the lowest {lowestNamesArr.length > 0 ? lowestNamesArr.map((n, idx) => (
-            <Text key={`low-${idx}`} style={styles.analysisSubject}>{n}{idx < lowestNamesArr.length - 1 ? ", " : ""}</Text>
-          )) : "—"}</Text>
+          <Text style={styles.analysisText}>You got the highest at {highestEntry.name}.</Text>
+          <Text style={styles.analysisText}>You got the lowest {lowestNamesArr.length > 0 ? lowestNamesArr.join(', ') : '—'}</Text>
         </View>
 
         <Pressable style={styles.reviewButton} onPress={onReviewPress}>

@@ -1,5 +1,6 @@
 import { getCurrentUserProfile, getStudentReportAnalytics, listSubjects } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { storage } from "@/lib/storage";
 import { Feather } from "@expo/vector-icons";
 import React, { useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from "react-native";
@@ -231,19 +232,31 @@ export const ProgressOverviewCard: React.FC = () => {
                 const subjectsList = Array.isArray(subjectsRes)
                     ? subjectsRes
                     : (subjectsRes?.subjects ?? subjectsRes?.items ?? []);
+                const locals = await Promise.all((subjectsList || []).map(async (s: any) => {
+                  const sid = String(s.id || s.subject_id || s._id || s.uid || "");
+                  const modKey = sid ? `subject_module_progress:${sid}` : "";
+                  const assessKey = sid ? `subject_assessment_progress:${sid}` : "";
+                  let modPct = 0; let assessPct = 0;
+                  try { const raw = modKey ? await storage.getItem(modKey) : null; if (raw) { const parsed = JSON.parse(raw); modPct = Number(parsed?.percentage ?? 0) || 0; } } catch {}
+                  try { const raw = assessKey ? await storage.getItem(assessKey) : null; if (raw) { const parsed = JSON.parse(raw); assessPct = Number(parsed?.percentage ?? 0) || 0; } } catch {}
+                  return { sid, modPct, assessPct };
+                }));
 
                 const items: SubjectData[] = (subjectsList || []).map((s: any, idx: number) => {
                     const id = String(s.id || s.subject_id || s._id || s.uid || "");
                     const title = String(s.title || s.subject_title || s.name || "Untitled Subject");
                     const perf = id ? perfById[id] : null;
+                    const local = locals.find((l) => l.sid === id) || { sid: id, modPct: 0, assessPct: 0 };
+                    const fromPerf = (perf && perf.average_score != null) ? Number(perf.average_score) || 0 : null;
+                    const fromReport = (id && progressById[id] != null) ? Number(progressById[id]) || 0 : null;
+                    const fromLocals = (() => {
+                      const a = Number(local.assessPct) || 0;
+                      const m = Number(local.modPct) || 0;
+                      if (a && m) return Math.round((a + m) / 2);
+                      return a || m || 0;
+                    })();
+                    const percentage = fromPerf ?? fromReport ?? fromLocals ?? 0;
                     
-                    // Determine percentage from average_score (performance) or completeness (progress)
-                    const percentage = (perf && perf.average_score != null)
-                        ? Number(perf.average_score) || 0
-                        : (id && progressById[id] != null)
-                            ? Number(progressById[id]) || 0
-                            : 0;
-                            
                     const status = mapPercentageToStatus(percentage);
                     
                     return {
@@ -294,7 +307,7 @@ export const ProgressOverviewCard: React.FC = () => {
 
     return (
         <View style={overviewStyles.container}>
-            <Text style={overviewStyles.mainTitle}>Progress Overview:</Text>
+            <Text style={overviewStyles.mainTitle}>Evaluation Overview</Text>
             {content}
         </View>
     );
