@@ -1,4 +1,12 @@
-import { getModuleById, hasTakenAssessment, listAssessmentsByModule, updateModuleProgress } from '@/lib/api';
+import { 
+  getModuleById, 
+  hasTakenAssessment, 
+  listAssessmentsByModule, 
+  updateModuleProgress, 
+  startStudySession, 
+  updateStudySession, 
+  getModuleProgress
+} from '@/lib/api';
 import { Feather, Ionicons } from '@expo/vector-icons';
 import { router, Stack, useLocalSearchParams, useNavigation } from 'expo-router';
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
@@ -13,436 +21,333 @@ import {
   StatusBar,
   StyleSheet,
   Text,
+  ActivityIndicator,
   View,
+  Alert // Import Alert for pop-up
 } from 'react-native';
-import RenderHtml from 'react-native-render-html';
+import Markdown from 'react-native-markdown-display'; 
 import { Fonts } from '../../../constants/cognify-theme';
 
 const { width } = Dimensions.get('window');
 
 export default function ModuleReadingScreen() {
   const { id, subjectId } = useLocalSearchParams<{ id: string; subjectId?: string }>();
+  
+  // Data State
+  const [loading, setLoading] = useState(true);
   const [moduleTitle, setModuleTitle] = useState<string>('');
   const [moduleAuthor, setModuleAuthor] = useState<string>('');
   const [moduleInputType, setModuleInputType] = useState<string>('');
   const [moduleMaterialUrl, setModuleMaterialUrl] = useState<string>('');
   const [moduleContent, setModuleContent] = useState<string>('');
+  
+  // Quiz State
   const [hasVerifiedAssessment, setHasVerifiedAssessment] = useState(false);
   const [assessmentId, setAssessmentId] = useState<string>('');
   const [hasTakenThisAssessment, setHasTakenThisAssessment] = useState(false);
-  const navigation = useNavigation();
+  
+  // Progress State
+  const [readingProgress, setReadingProgress] = useState(0);
+  const maxProgressRef = useRef(0);
+  const lastSavedPctRef = useRef(0);
+  const sessionIdRef = useRef<string | null>(null);
+  const sessionStartTimeRef = useRef<number>(Date.now());
+  const scrollViewHeightRef = useRef(0);
+  const contentHeightRef = useRef(0);
 
-  // --- THEME STATE ---
+  const navigation = useNavigation();
   const [isDarkMode, setIsDarkMode] = useState(false);
 
-  // Initialize progress from global store
-  const initialProgress = (global as any).MODULE_PROGRESS?.[id]
-    ? (global as any).MODULE_PROGRESS[id] / 100
-    : 0;
+  // PDF State
+  const [pdfTotalPages, setPdfTotalPages] = useState(0);
+  const [pdfCurrentPage, setPdfCurrentPage] = useState(1);
 
-  const [readingProgress, setReadingProgress] = useState(initialProgress);
-  const maxProgressRef = useRef(initialProgress);
-  const lastSavedPctRef = useRef(Math.round(initialProgress * 100));
-
-  // --- HIDE BOTTOM TABS ---
   useLayoutEffect(() => {
-    navigation.getParent()?.setOptions({
-      tabBarStyle: { display: 'none' },
-    });
-    return () => {
-      navigation.getParent()?.setOptions({
-        tabBarStyle: undefined,
-      });
-    };
+    navigation.getParent()?.setOptions({ tabBarStyle: { display: 'none' } });
+    return () => { navigation.getParent()?.setOptions({ tabBarStyle: undefined }); };
   }, [navigation]);
 
+  // --- INITIAL LOAD ---
   useEffect(() => {
     let mounted = true;
     const run = async () => {
       if (!id) return;
+      setLoading(true);
+
+      // Load Module
       try {
-        const mod = await getModuleById(String(id));
-        const t = String(mod?.title ?? '');
-        const a = String(mod?.purpose ?? mod?.author ?? mod?.description ?? '');
-        const it = String(mod?.input_type ?? '');
-        const mu = String(mod?.material_url ?? '');
-        const ct = String(mod?.content ?? '');
+        const rawMod = await getModuleById(String(id));
+        const mod = rawMod?.data || rawMod;
+        if (mounted && mod) {
+          setModuleTitle(mod.title || '');
+          setModuleAuthor(mod.author || mod.purpose || '');
+          setModuleInputType(mod.input_type || '');
+          setModuleMaterialUrl(mod.material_url || '');
+          setModuleContent(mod.content || '');
+        }
+      } catch (e) {}
+
+      // Load Progress
+      try {
+        const prev = await getModuleProgress(String(id));
+        const prevPct = (prev?.percentage || 0) / 100;
         if (mounted) {
-          if (t) setModuleTitle(t);
-          if (a) setModuleAuthor(a);
-          if (it) setModuleInputType(it);
-          if (mu) setModuleMaterialUrl(mu);
-          if (ct) setModuleContent(ct);
+          setReadingProgress(prevPct);
+          maxProgressRef.current = prevPct;
+          lastSavedPctRef.current = Math.round(prevPct * 100);
         }
       } catch {}
+
+      // Load Assessment (Correctly filters using backend param)
       try {
         const assessments = await listAssessmentsByModule(String(id));
         const first = Array.isArray(assessments) ? assessments[0] : undefined;
-        if (mounted) {
-          const exists = !!first;
-          setHasVerifiedAssessment(exists);
-          const aid = String(first?.id ?? '');
-          setAssessmentId(aid);
-          if (aid) {
-            try {
-              const ok = await hasTakenAssessment(aid);
-              setHasTakenThisAssessment(!!ok);
-            } catch {}
-          }
+        if (mounted && first) {
+          setHasVerifiedAssessment(true);
+          setAssessmentId(first.id);
+          const ok = await hasTakenAssessment(first.id);
+          setHasTakenThisAssessment(!!ok);
         }
       } catch {}
+
+      // Start Session
+      try {
+        const sessionData = await startStudySession(String(id), 'module');
+        if (sessionData?.session_id) {
+          sessionIdRef.current = sessionData.session_id;
+          sessionStartTimeRef.current = Date.now();
+        }
+      } catch {}
+
+      if (mounted) setLoading(false);
     };
     run();
-    return () => { mounted = false; };
+
+    return () => {
+      mounted = false;
+      if (sessionIdRef.current) {
+        const isFinished = maxProgressRef.current >= 0.95;
+        updateStudySession(sessionIdRef.current, 0, 0, isFinished).catch(() => {});
+      }
+      const finalPct = Math.round(maxProgressRef.current * 100);
+      updateModuleProgress(String(id), subjectId, finalPct, finalPct >= 100 ? 'completed' : 'in_progress').catch(() => {});
+    };
   }, [id]);
 
-  // --- SCROLL HANDLER ---
-  const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
-    const { layoutMeasurement, contentOffset, contentSize } = event.nativeEvent;
+  // --- PROGRESS & POPUP LOGIC ---
+  const handleProgressUpdate = (newProgress: number) => {
+    const capped = Math.min(newProgress, 1);
+    
+    if (capped > maxProgressRef.current) {
+      maxProgressRef.current = capped;
+      setReadingProgress(capped);
 
-    const visibleHeight = layoutMeasurement.height;
-    const contentHeight = contentSize.height;
-    const scrollY = contentOffset.y;
+      const pctInt = Math.round(capped * 100);
+      
+      if (pctInt - lastSavedPctRef.current >= 5) {
+        lastSavedPctRef.current = pctInt;
+        const status = pctInt >= 100 ? 'completed' : 'in_progress';
+        updateModuleProgress(String(id), subjectId, pctInt, status).catch(() => {});
+        if (sessionIdRef.current) updateStudySession(sessionIdRef.current, 0, 0, false).catch(() => {});
 
-    const scrollableHeight = contentHeight - visibleHeight;
-
-    if (scrollableHeight > 0) {
-      const currentRawProgress = scrollY / scrollableHeight;
-
-    const cappedProgress = Math.min(currentRawProgress, 1);
-
-      // Monotonic Check (Don't go backwards)
-      if (cappedProgress > maxProgressRef.current) {
-        maxProgressRef.current = cappedProgress;
-        setReadingProgress(cappedProgress);
-
-        // Save to Global Store for the list view
-        if (!(global as any).MODULE_PROGRESS) (global as any).MODULE_PROGRESS = {};
-        (global as any).MODULE_PROGRESS[id] = cappedProgress * 100;
-
-        const pctInt = Math.round(cappedProgress * 100);
-        if (pctInt - lastSavedPctRef.current >= 5) {
-          lastSavedPctRef.current = pctInt;
-          const st = pctInt >= 100 ? 'completed' : 'in_progress';
-          updateModuleProgress(String(id), subjectId ? String(subjectId) : undefined, pctInt, st).catch(() => {});
+        // [FIX] POP-UP ALERT WHEN DONE
+        if (pctInt >= 100 && hasVerifiedAssessment && !hasTakenThisAssessment) {
+            Alert.alert(
+                "Module Completed! 🎉",
+                "You have finished reading. Would you like to take the assessment now?",
+                [
+                    { text: "Later", style: "cancel" },
+                    { 
+                      text: "Take Quiz", 
+                      onPress: () => router.push({ pathname: '/(app)/quiz/[id]', params: { id: assessmentId } }) 
+                    }
+                ]
+            );
         }
       }
     }
   };
 
-  useEffect(() => {
-    return () => {
-      try {
-        const pctInt = Math.round(maxProgressRef.current * 100);
-        const st = pctInt >= 100 ? 'completed' : 'in_progress';
-        updateModuleProgress(String(id), subjectId ? String(subjectId) : undefined, pctInt, st).catch(() => {});
-      } catch {}
-    };
-  }, [id, subjectId]);
+  const checkScrollability = (contentH: number, layoutH: number) => {
+    if (contentH > 0 && layoutH > 0 && contentH <= layoutH + 20) {
+         handleProgressUpdate(1);
+    }
+  };
 
-  // --- THEME HELPERS ---
+  const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    if (isPdf && Platform.OS !== 'web') return; 
+    const { layoutMeasurement, contentOffset, contentSize } = event.nativeEvent;
+    
+    scrollViewHeightRef.current = layoutMeasurement.height;
+    contentHeightRef.current = contentSize.height;
+
+    const scrollableHeight = contentSize.height - layoutMeasurement.height;
+
+    if (scrollableHeight > 0) {
+      if (scrollableHeight - contentOffset.y <= 50) {
+          handleProgressUpdate(1);
+      } else {
+          handleProgressUpdate(contentOffset.y / scrollableHeight);
+      }
+    } else {
+      handleProgressUpdate(1);
+    }
+  };
+
+  // ... (Theme setup same as before)
   const toggleTheme = () => setIsDarkMode(!isDarkMode);
+  const inputType = moduleInputType?.toLowerCase();
+  const isPdf = inputType === 'pdf' || (!inputType && moduleMaterialUrl?.toLowerCase().endsWith('.pdf'));
+  const PdfComponent = Platform.OS !== 'web' ? (() => { try { return require('react-native-pdf').default; } catch { return null; } })() : null;
+  const pdfSource = moduleMaterialUrl ? { uri: moduleMaterialUrl, cache: true } : undefined;
 
-  // Dynamic Colors based on state
   const themeColors = {
     background: isDarkMode ? '#1c1c1cff' : '#ffffffff',
     textPrimary: isDarkMode ? '#FFFFFF' : '#000000',
     textSecondary: isDarkMode ? '#B0B0B0' : '#666666',
-    textBody: isDarkMode ? '#E0E0E0' : '#2D2D2D',
-    quizBg: isDarkMode ? '#1E1E1E' : '#F3EEF6',
-    quizBorder: isDarkMode ? '#333333' : '#E0E0E0',
+    cardBg: isDarkMode ? '#2C2C2C' : '#F4F6F8',
     footerBg: isDarkMode ? '#1E1E1E' : '#FFFFFF',
-    footerBorder: isDarkMode ? '#333333' : '#F0F0F0',
+    fill: isDarkMode ? '#A38FDB' : '#381E72',
+    codeBg: isDarkMode ? '#333' : '#eee',
   };
 
-  const inputType = moduleInputType?.toLowerCase();
-  const isPdf = inputType === 'pdf' || (!inputType && moduleMaterialUrl?.toLowerCase().endsWith('.pdf'));
-  const pdfSource = moduleMaterialUrl ? { uri: moduleMaterialUrl } : undefined;
-  const PdfComponent = Platform.OS !== 'web' ? (() => {
-    try { return require('react-native-pdf').default; } catch { return null; }
-  })() : null;
-
-  const tagsStyles = {
-    body: {
-      color: themeColors.textBody,
-      fontFamily: Fonts.poppinsRegular,
-      fontSize: 17,
-      lineHeight: 30,
-      textAlign: 'justify' as const,
-    },
-    p: {
-      marginBottom: 16,
-      textAlign: 'justify' as const,
-    },
-    h1: {
-      fontSize: 26,
-      fontFamily: Fonts.poppinsMedium,
-      color: themeColors.textPrimary,
-      marginTop: 5,
-      marginBottom: 5,
-    },
-    h2: {
-      fontSize: 22,
-      fontFamily: Fonts.poppinsMedium,
-      color: themeColors.textPrimary,
-      marginTop: 5,
-      marginBottom: 5,
-    },
-    ul: {
-      marginLeft: 20,
-      marginBottom: 16,
-    },
-    ol: {
-      marginLeft: 20,
-      marginBottom: 16,
-    },
-    li: {
-      marginBottom: 8,
-    },
-    blockquote: {
-      borderLeftWidth: 3,
-      borderLeftColor: isDarkMode ? '#555' : '#e5e7eb',
-      paddingLeft: 12,
-      marginLeft: 4,
-      marginBottom: 16,
-      fontStyle: 'italic' as const,
-      color: isDarkMode ? '#bbb' : '#6b7280',
-    },
+  const markdownStyles = {
+    body: { color: themeColors.textPrimary, fontFamily: Fonts.poppinsRegular, fontSize: 16, lineHeight: 26 },
+    heading1: { fontSize: 24, fontFamily: Fonts.poppinsMedium, color: themeColors.fill, marginTop: 20, marginBottom: 10 },
+    heading2: { fontSize: 20, fontFamily: Fonts.poppinsMedium, color: themeColors.textPrimary, marginTop: 15, marginBottom: 8 },
+    paragraph: { marginBottom: 12 },
+    code_inline: { backgroundColor: themeColors.codeBg, color: themeColors.textPrimary, borderRadius: 4 },
   };
+
+  if (loading) {
+    return (
+      <SafeAreaView style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator size="large" color={themeColors.fill} />
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: themeColors.background }]}>
       <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} />
       <Stack.Screen options={{ headerShown: false }} />
 
-      {/* Header */}
       <View style={styles.header}>
-        <Pressable
-          style={styles.backButton}
-          onPress={() => {
-            if (subjectId) {
-              router.push({ pathname: '/(app)/subject/[id]', params: { id: String(subjectId) } });
-            } else {
-              router.back();
-            }
-          }}
-        >
+        <Pressable style={styles.backButton} onPress={() => router.back()}>
           <Ionicons name="chevron-back" size={24} color="#FFF" />
         </Pressable>
-
-        {/* Theme Toggle Button */}
         <Pressable style={styles.iconButton} onPress={toggleTheme}>
-          <Feather
-            name={isDarkMode ? "sun" : "moon"}
-            size={24}
-            color={themeColors.textPrimary}
-          />
+          <Feather name={isDarkMode ? "sun" : "moon"} size={24} color={themeColors.textPrimary} />
         </Pressable>
       </View>
 
-      {/* ScrollView */}
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-        onScroll={handleScroll}
-        scrollEventThrottle={16}
-      >
-        <Text style={[styles.title, { color: themeColors.textPrimary }]}>
-          {moduleTitle || 'Module'}
-        </Text>
-        {moduleAuthor ? (
-          <Text style={[styles.author, { color: themeColors.textSecondary }]}>
-            {moduleAuthor}
-          </Text>
-        ) : null}
-
-        {isPdf && pdfSource ? (
-          Platform.OS === 'web' ? (
-            <View style={{ height: width * 1.2, borderRadius: 8, overflow: 'hidden' }}>
-              {moduleMaterialUrl ? (
-                <iframe
-                  src={`https://docs.google.com/gview?embedded=true&url=${encodeURIComponent(moduleMaterialUrl)}`}
-                  style={{ width: '100%', height: '100%', border: 'none' } as any}
-                />
-              ) : null}
-            </View>
-          ) : (
-            <View style={{ height: width * 1.2, borderRadius: 8, overflow: 'hidden' }}>
-              <PdfComponent
-                source={pdfSource}
-                trustAllCerts
-                style={{ flex: 1 }}
-              />
-            </View>
-          )
-        ) : (
-          <RenderHtml
-            contentWidth={width - 48}
-            source={{ html: moduleContent || '<p>No content available.</p>' }}
-            tagsStyles={tagsStyles}
-            baseStyle={{ fontFamily: Fonts.poppinsRegular }}
+      {isPdf && pdfSource && Platform.OS !== 'web' && PdfComponent ? (
+        <View style={{ flex: 1 }}>
+          <Text style={[styles.title, { color: themeColors.textPrimary, marginBottom: 10 }]}>{moduleTitle}</Text>
+          <PdfComponent
+            source={pdfSource}
+            onLoadComplete={(numberOfPages: number) => setPdfTotalPages(numberOfPages)}
+            onPageChanged={(page: number, numberOfPages: number) => {
+               setPdfCurrentPage(page);
+               setPdfTotalPages(numberOfPages);
+               handleProgressUpdate(page / numberOfPages);
+            }}
+            style={styles.pdf}
+            trustAllCerts={false}
           />
-        )}
+        </View>
+      ) : (
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          onScroll={handleScroll}
+          scrollEventThrottle={16}
+          showsVerticalScrollIndicator={false}
+          onLayout={(e) => {
+             const h = e.nativeEvent.layout.height;
+             scrollViewHeightRef.current = h;
+             checkScrollability(contentHeightRef.current, h);
+          }}
+          onContentSizeChange={(w, h) => {
+             contentHeightRef.current = h;
+             checkScrollability(h, scrollViewHeightRef.current);
+          }}
+        >
+          <Text style={[styles.title, { color: themeColors.textPrimary }]}>{moduleTitle || 'Module'}</Text>
+          {moduleAuthor ? <Text style={[styles.author, { color: themeColors.textSecondary }]}>{moduleAuthor}</Text> : null}
 
-        {hasVerifiedAssessment && (
-          <View style={[
-            styles.quizSection,
-            { backgroundColor: themeColors.quizBg, borderColor: themeColors.quizBorder }
-          ]}>
-            <Text style={[styles.quizPrompt, { color: themeColors.textBody }]}>Finished reading? Test your knowledge.</Text>
-            <Pressable style={styles.quizButton} onPress={() => router.push({ pathname: '/(app)/quiz/[id]', params: { id: assessmentId || id } })}>
-              <Text style={styles.quizButtonText}>{hasTakenThisAssessment ? 'Retake Quiz' : 'Take Assessment'}</Text>
-              <Ionicons name="arrow-forward" size={20} color="#FFF" />
-            </Pressable>
-          </View>
-        )}
+          {isPdf && Platform.OS === 'web' ? (
+             <View style={{ height: width * 1.5, borderRadius: 8, overflow: 'hidden' }}>
+               <iframe src={`https://docs.google.com/gview?embedded=true&url=${encodeURIComponent(moduleMaterialUrl)}`} style={{ width: '100%', height: '100%', border: 'none' } as any} />
+             </View>
+          ) : (
+             <Markdown style={markdownStyles}>
+                {moduleContent || 'No content available.'}
+             </Markdown>
+          )}
 
-        {/* Extra spacer */}
-        <View style={{ height: 120 }} />
-      </ScrollView>
+          {/* ASSESSMENT CARD - Visible if assessment exists */}
+          {hasVerifiedAssessment && (
+            <View style={[styles.quizSection, { backgroundColor: themeColors.cardBg }]}>
+              <View style={styles.quizInfo}>
+                  <Text style={[styles.quizTitle, { color: themeColors.textPrimary }]}>
+                      Module Assessment
+                  </Text>
+                  <Text style={[styles.quizDesc, { color: themeColors.textSecondary }]}>
+                      {hasTakenThisAssessment 
+                          ? "You've already completed this quiz." 
+                          : "Test your understanding of this module."}
+                  </Text>
+              </View>
+              
+              <Pressable 
+                  style={[styles.quizButton, { opacity: hasTakenThisAssessment ? 0.7 : 1 }]} 
+                  onPress={() => router.push({ pathname: '/(app)/quiz/[id]', params: { id: assessmentId } })}
+              >
+                <Text style={styles.quizButtonText}>
+                    {hasTakenThisAssessment ? 'Retake' : 'Start Quiz'}
+                </Text>
+                <Ionicons name="arrow-forward" size={18} color="#FFF" />
+              </Pressable>
+            </View>
+          )}
 
-      {/* Floating Progress Footer */}
-      <View style={[
-        styles.footer,
-        { backgroundColor: themeColors.footerBg, borderTopColor: themeColors.footerBorder }
-      ]}>
+          <View style={{ height: 120 }} />
+        </ScrollView>
+      )}
+
+      <View style={[styles.footer, { backgroundColor: themeColors.footerBg }]}>
         <View style={styles.progressInfo}>
-          <Text style={[styles.progressText, { color: isDarkMode ? '#A38FDB' : '#381E72' }]}>
-            {`${Math.round(readingProgress * 100)}% Read`}
+          <Text style={{ fontFamily: Fonts.poppinsMedium, color: themeColors.fill }}>
+            {isPdf && PdfComponent 
+                ? `Page ${pdfCurrentPage} of ${pdfTotalPages}` 
+                : `${Math.round(readingProgress * 100)}% Complete`}
           </Text>
         </View>
-        <View style={[styles.progressBarTrack, { backgroundColor: isDarkMode ? '#333' : '#F0F0F0' }]}>
-          <View
-            style={[
-              styles.progressBarFill,
-              { width: `${readingProgress * 100}%`, backgroundColor: isDarkMode ? '#A38FDB' : '#381E72' }
-            ]}
-          />
+        <View style={styles.progressBarTrack}>
+          <View style={[styles.progressBarFill, { width: `${readingProgress * 100}%`, backgroundColor: themeColors.fill }]} />
         </View>
       </View>
-
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    // Background handled dynamically
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#381E72',
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 3,
-    elevation: 4,
-  },
-  iconButton: {
-    padding: 8,
-  },
-  scrollContent: {
-    paddingHorizontal: 24,
-    paddingBottom: 20,
-  },
-  title: {
-    fontFamily: Fonts.poppinsMedium,
-    fontSize: 20,
-    textAlign: 'center',
-    marginBottom: 8,
-    lineHeight: 26,
-  },
-  author: {
-    fontFamily: Fonts.poppinsRegular,
-    fontSize: 15,
-    textAlign: 'center',
-    marginBottom: 30,
-  },
-  // --- Quiz Section ---
-  quizSection: {
-    marginTop: 40,
-    alignItems: 'center',
-    padding: 24,
-    borderRadius: 16,
-    borderWidth: 1,
-    // Colors handled dynamically
-  },
-  quizPrompt: {
-    fontFamily: Fonts.poppinsRegular,
-    fontSize: 15,
-    textAlign: 'center',
-    marginBottom: 16,
-    lineHeight: 22,
-  },
-  quizButton: {
-    backgroundColor: '#381E72',
-    paddingVertical: 14,
-    paddingHorizontal: 32,
-    borderRadius: 30,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    shadowColor: '#381E72',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
-    elevation: 6,
-  },
-  quizButtonText: {
-    color: '#FFF',
-    fontFamily: Fonts.poppinsMedium,
-    fontSize: 16,
-  },
-
-  // --- Footer ---
-  footer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    paddingHorizontal: 24,
-    paddingTop: 16,
-    paddingBottom: 30, // Safe area padding
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 10,
-    borderTopWidth: 1,
-  },
-  progressInfo: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    marginBottom: 8,
-  },
-  progressText: {
-    fontFamily: Fonts.poppinsMedium,
-    fontSize: 12,
-    // Color handled dynamically
-  },
-  progressBarTrack: {
-    height: 6,
-    borderRadius: 3,
-    overflow: 'hidden',
-    // Background handled dynamically
-  },
-  progressBarFill: {
-    height: '100%',
-    borderRadius: 3,
-    // Background handled dynamically
-  },
+  container: { flex: 1 },
+  header: { flexDirection: 'row', justifyContent: 'space-between', padding: 20 },
+  backButton: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#381E72', justifyContent: 'center', alignItems: 'center' },
+  iconButton: { padding: 8 },
+  scrollContent: { paddingHorizontal: 24, paddingBottom: 20 },
+  pdf: { flex: 1, width: Dimensions.get('window').width, height: Dimensions.get('window').height, backgroundColor: '#F5F5F5' },
+  title: { fontFamily: Fonts.poppinsMedium, fontSize: 22, textAlign: 'center', marginBottom: 8 },
+  author: { fontFamily: Fonts.poppinsRegular, fontSize: 14, textAlign: 'center', marginBottom: 20 },
+  quizSection: { marginTop: 40, padding: 20, borderRadius: 16, borderWidth: 1, borderColor: 'rgba(0,0,0,0.05)', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  quizInfo: { flex: 1, paddingRight: 10 },
+  quizTitle: { fontFamily: Fonts.poppinsMedium, fontSize: 16, marginBottom: 4 },
+  quizDesc: { fontFamily: Fonts.poppinsRegular, fontSize: 12 },
+  quizButton: { backgroundColor: '#381E72', paddingVertical: 10, paddingHorizontal: 16, borderRadius: 24, flexDirection: 'row', gap: 6, alignItems: 'center' },
+  quizButtonText: { color: '#FFF', fontFamily: Fonts.poppinsMedium, fontSize: 14 },
+  footer: { position: 'absolute', bottom: 0, left: 0, right: 0, paddingHorizontal: 24, paddingTop: 16, paddingBottom: 30, borderTopLeftRadius: 20, borderTopRightRadius: 20, shadowOpacity: 0.1, elevation: 10 },
+  progressInfo: { flexDirection: 'row', justifyContent: 'flex-end', marginBottom: 8 },
+  progressBarTrack: { height: 6, backgroundColor: '#F0F0F0', borderRadius: 3, overflow: 'hidden' },
+  progressBarFill: { height: '100%', borderRadius: 3 },
 });

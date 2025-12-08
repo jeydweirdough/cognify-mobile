@@ -17,8 +17,9 @@ import {
 // Assuming Fonts import is available from parent context/structure
 import { Fonts } from "../../constants/cognify-theme";
 
+// [FIX] Updated type to accept string IDs (UUIDs)
 interface QuestionData {
-  id: number;
+  id: string | number;
   subject: string;
   question: string;
   options: string[];

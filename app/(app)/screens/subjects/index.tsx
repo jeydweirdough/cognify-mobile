@@ -1,23 +1,26 @@
-// index.tsx (LearningScreen.tsx)
-
-import { api, getSubjectTopics, listSubjects } from "@/lib/api"; // 💡 EDITED: Import listSubjects
-import { Topic } from "@/lib/types"; // 💡 Import Topic type if available
-import { FontAwesome5 } from "@expo/vector-icons";
-import { useFonts } from "expo-font";
-import React, { useEffect, useState } from "react";
+import { Colors, Fonts } from '@/constants/cognify-theme';
+import { getStudentReportAnalytics, listSubjects } from '@/lib/api';
+import { useAuth } from '@/lib/auth';
+import { Subject } from '@/lib/types';
+import { Ionicons } from '@expo/vector-icons';
+import { router, useFocusEffect } from 'expo-router';
+import React, { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
+  FlatList,
   RefreshControl,
-  ScrollView,
+  SafeAreaView,
+  StatusBar,
   StyleSheet,
   Text,
-  TouchableOpacity,
+  TextInput,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 // Assuming these are defined elsewhere or passed correctly
 import { AddSubjectModal } from "@/components/subjects/AddSubjectModal";
+import MotivationCard from "@/components/subjects/Motivation-quote";
 import { SubjectCard } from "@/components/subjects/SubjectCard";
 import Header from "@/components/ui/header";
 
@@ -64,183 +67,147 @@ interface UISubject {
 
 export default function LearningScreen() {
   const [loading, setLoading] = useState(true);
-  // 💡 EDITED: Use the new UISubject interface
-  const [subjects, setSubjects] = useState<UISubject[]>([]);
   const [refreshing, setRefreshing] = useState(false);
-  const [isModalVisible, setIsModalVisible] = useState(false);
-  
-  // 💡 NEW STATE: Store the global topic progress map
-  // This will be passed to SubjectCard to calculate overall progress
-  const [topicProgressMap, setTopicProgressMap] = useState<Record<string, number>>({});
+  const [searchQuery, setSearchQuery] = useState('');
 
-  const openModal = () => setIsModalVisible(true);
-  const closeModal = () => setIsModalVisible(false);
-
-  const [fontsLoaded] = useFonts({
-    "LexendDeca-Medium": require("@/assets/fonts/LexendDeca-Medium.ttf"),
-    "LexendDeca-Regular": require("@/assets/fonts/LexendDeca-Regular.ttf"),
-    "Poppins-Regular": require("@/assets/fonts/Poppins-Regular.ttf"),
-  });
-
-  // --- NEW: Helper to get the current global progress ---
-  const getGlobalTopicProgress = () => {
-    // Access the global storage for all topic progress
-    const progressMap = (global as any).MODULE_PROGRESS || {};
-    return progressMap;
-  };
-
-  const handleAddSubject = async (subjectTitle: string) => {
-    closeModal();
-    setLoading(true);
-
+  // --- FETCH & MERGE LOGIC ---
+  const fetchData = useCallback(async () => {
     try {
-      await api.post("/subjects/", {
-        subject_title: subjectTitle,
-        description: `A new subject: ${subjectTitle}`,
-      });
+      // 1. Fetch Subjects List
+      const subjectsData = await listSubjects();
+      const items = Array.isArray(subjectsData) ? subjectsData : (subjectsData?.items || []);
 
-      await fetchSubjectsWithProgress();
-    } catch (error) {
-      console.error("Failed to add subject:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // 💡 EDITED: Main function to fetch subjects AND their topic/module IDs
-  const fetchSubjectsWithProgress = async () => {
-    try {
-      // 1. Fetch Subject List (normalized)
-      const backendSubjects: BackendSubject[] = await listSubjects();
-      const progressMap = getGlobalTopicProgress(); // Get current progress map
-      setTopicProgressMap(progressMap);
-
-      if (backendSubjects.length === 0) {
-        setSubjects([]);
-        return;
+      // 2. Fetch User Progress (if logged in)
+      let progressMap: Record<string, any> = {};
+      if (user?.id) {
+        try {
+          const report = await getStudentReportAnalytics(user.id);
+          const analytics = report?.data || report || {};
+          const reports = analytics.progress_report || [];
+          
+          reports.forEach((r: any) => {
+            const sid = String(r.subject_id || r.subjectId || '');
+            progressMap[sid] = {
+                overall: Number(r.overall_completeness ?? 0),
+                modules: Number(r.modules_completeness ?? 0),
+                assessments: Number(r.assessment_completeness ?? 0)
+            };
+          });
+        } catch (e) {
+          console.log('Failed to load analytics for subjects', e);
+        }
       }
 
-      // 2. Fetch Topics for each Subject in parallel
-      const subjectPromises = backendSubjects.map(
-        async (sub: BackendSubject, index: number) => {
-          const palette = COLOR_PALETTE[index % COLOR_PALETTE.length];
-          let topicIds: string[] = [];
-          
-          try {
-            // Call the endpoint used in SubjectModulesScreen.tsx
-            const topicsResponse = await getSubjectTopics(String(sub.id));
-            const topics = Array.isArray(topicsResponse?.topics) ? topicsResponse.topics : [];
-            const topicsWithContent = topics.filter((t: Topic) => t.lecture_content);
-            topicIds = topicsWithContent.map((t: Topic) => t.id);
-            
-          } catch (error) {
-            console.error(`Failed to fetch topics for ${sub.title}:`, error);
-            // Default to empty array on failure
-          }
-          
-          return {
-            id: sub.id,
-            title: String(sub.title || "Untitled Subject"),
-            description: String(sub.description || "No description available"),
-            // The percentage will be CALCULATED in SubjectCard
-            iconColor: palette.iconColor,
-            iconBgColor: palette.iconBgColor,
-            cardBgColor: palette.cardBgColor,
-            topicIds: topicIds, // Pass the list of relevant topic IDs
-          };
-        }
-      );
+      // 3. Merge Progress into Subjects
+      const merged = items.map((s: any) => {
+        const stats = progressMap[String(s.id)] || { overall: 0, modules: 0, assessments: 0 };
+        return {
+            ...s,
+            // Inject the progress we found (default 0)
+            progress: stats.overall,
+            // Logic: If modules are done (100%) but assessment is not ( < 80% or 100%), they are ready for Post-Assessment
+            isReadyForPostAssessment: stats.modules >= 100 && stats.assessments < 100
+        };
+      });
 
-      // Wait for all topic fetches to complete
-      const formattedSubjects: UISubject[] = await Promise.all(subjectPromises);
-
-      setSubjects(formattedSubjects);
-
+      setSubjects(merged);
     } catch (error) {
-      console.error("Failed to fetch subjects or their topics:", error);
-      setSubjects([]);
+      console.error(error);
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  };
+  }, [user?.id]);
 
-  useEffect(() => {
-    fetchSubjectsWithProgress();
-  }, []);
+  // Reload data every time the screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      fetchData();
+    }, [fetchData])
+  );
 
-  const onRefresh = () => {
-    setRefreshing(true);
-    // 💡 EDITED: Use the new function for refreshing
-    fetchSubjectsWithProgress(); 
-  };
+  const filteredSubjects = subjects.filter((s) =>
+    s.title.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
-  if (loading || !fontsLoaded) {
+  if (loading) {
     return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.centered}>
-          <ActivityIndicator size="large" color={Colors.primary} />
-        </View>
-      </SafeAreaView>
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={Colors.primary} />
+      </View>
     );
   }
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: "#F9F9F9" }}>
-      <Header title="Learning" />
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
-      >
-        {/* <MotivationCard /> */}
-
-        <View style={styles.addSubjectButtonContainer}>
-          <TouchableOpacity onPress={openModal} style={styles.addSubjectButton}>
-            <FontAwesome5 name="folder-plus" size={24} color={Colors.primary} />
-          </TouchableOpacity>
+    <SafeAreaView style={styles.container}>
+      <StatusBar barStyle="dark-content" />
+      
+      {/* HEADER */}
+      <View style={styles.header}>
+        <View>
+          <Text style={styles.headerTitle}>Subjects</Text>
+          <Text style={styles.headerSubtitle}>Explore your learning path</Text>
         </View>
+        <View style={styles.searchContainer}>
+          <Ionicons name="search" size={20} color="#999" style={styles.searchIcon} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search subjects..."
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+          />
+        </View>
+      </View>
 
-        {subjects.length > 0 ? (
-          subjects.map((subject) => (
-            // 💡 EDITED: Pass totalTopics, topicIds, and the topicProgressMap
-            <SubjectCard 
-                key={subject.id} 
-                data={{
-                    ...subject,
-                    topicProgressMap: topicProgressMap, // Pass the global progress map
-                    totalTopics: subject.topicIds.length, // Pass the count
-                }} 
-            />
-          ))
-        ) : (
-          <View style={styles.centered}>
-            <Text style={{ fontFamily: Fonts.regular, marginTop: 20 }}>
-              No subjects found.
-            </Text>
-          </View>
+      {/* LIST */}
+      <FlatList
+        data={filteredSubjects}
+        keyExtractor={(item) => String(item.id)}
+        contentContainerStyle={styles.listContent}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchData(); }} />
+        }
+        renderItem={({ item, index }) => (
+          <SubjectCard
+            subject={item}
+            index={index}
+            onPress={() =>
+              router.push({
+                pathname: '/(app)/subject/[id]',
+                params: { id: item.id, subjectTitle: item.title },
+              })
+            }
+          />
         )}
-      </ScrollView>
-
-      <AddSubjectModal
-        visible={isModalVisible}
-        onClose={closeModal}
-        onAdd={handleAddSubject}
+        ListEmptyComponent={
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyText}>No subjects found.</Text>
+          </View>
+        }
       />
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.background },
-  centered: { flex: 1, justifyContent: "center", alignItems: "center" },
-  scrollContent: { paddingHorizontal: 20, paddingBottom: 5, paddingTop: 10 },
-  addSubjectButtonContainer: {
-    flexDirection: "row",
-    justifyContent: "flex-end",
-    paddingVertical: 0,
-    paddingHorizontal: 5,
+  container: { flex: 1, backgroundColor: '#F9F9F9' },
+  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  header: { padding: 20, backgroundColor: '#fff', paddingBottom: 15 },
+  headerTitle: { fontFamily: Fonts.poppinsMedium, fontSize: 24, color: '#333' },
+  headerSubtitle: { fontFamily: Fonts.poppinsRegular, fontSize: 14, color: '#666', marginTop: 2 },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F5F5F5',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    marginTop: 15,
+    height: 44,
   },
-  addSubjectButton: { padding: 8, borderRadius: 8 },
+  searchIcon: { marginRight: 8 },
+  searchInput: { flex: 1, fontFamily: Fonts.poppinsRegular, fontSize: 14, color: '#333' },
+  listContent: { padding: 20 },
+  emptyContainer: { alignItems: 'center', marginTop: 50 },
+  emptyText: { fontFamily: Fonts.poppinsRegular, color: '#999' },
 });

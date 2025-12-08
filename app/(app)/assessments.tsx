@@ -1,74 +1,51 @@
-// @/components/diagnostic/Assessments.tsx
-import { router } from "expo-router";
-import React, { useEffect, useRef, useState } from "react";
-import { Alert, Dimensions } from "react-native";
-
-// Import separated components
 import { AssessmentResultScreen } from "@/components/diagnostic/AssessmentResultScreen";
 import { AssessmentReviewScreen } from "@/components/diagnostic/AssessmentReviewScreen";
 import { AssessmentStartScreen } from "@/components/diagnostic/AssessmentStartScreen";
 import { QuizScreen } from "@/components/diagnostic/QuizScreen";
 import { useAuth } from "@/lib/auth";
+import { router } from "expo-router";
+import React, { useEffect, useRef, useState } from "react";
+import { ActivityIndicator, Alert, Dimensions, View } from "react-native";
 import {
+  analyzeReadiness,
   getDiagnosticAssessmentQuestions,
-  getDiagnosticRecommendations,
   hasTakenDiagnostic,
-  listSubjects,
   setDiagnosticStatus,
-  submitDiagnosticSubmission,
+  submitAssessmentSubmission
 } from "../../lib/api";
 import { storage } from "../../lib/storage";
 
 const { width } = Dimensions.get("window");
-const INITIAL_TIME_SECONDS = 1200; // 20 minutes for 20 questions
+const INITIAL_TIME_SECONDS = 1200; 
 
-// --- New Interface for Subject Scores (Needed by AssessmentResultScreen) ---
+// --- TYPES ---
 interface SubjectScore {
   subject: string;
   correct: number;
   total: number;
 }
 
-// -------------------------------------------------------------------------
-let LAST_DIAGNOSTIC_SUBJECT_SCORES: SubjectScore[] = [];
-
 interface QuestionData {
-  id: number;
+  id: string | number;
   subject: string;
   question: string;
   options: string[];
   correctIndex: number;
+  // [FIX] Track origin assessment to submit correctly later
+  assessmentId: string;
+  subjectId: string; 
 }
 
-// --- UTILITY FUNCTION FOR SAVING RESULTS ---
-const saveAssessmentResults = async (
-  storageKey: string,
-  score: number,
-  totalQuestions: number,
-  subjectScores: SubjectScore[],
-  recommendedSubjects?: string[]
-) => {
+const saveAssessmentResults = async (storageKey: string, score: number, total: number, subjectScores: SubjectScore[], recommended: string[]) => {
   try {
-    const assessmentData = {
-      score,
-      totalQuestions,
-      subjectScores,
-      recommendedSubjects,
-      timestamp: new Date().toISOString(),
-    };
-    await storage.setItem(storageKey, JSON.stringify(assessmentData));
-    console.log("Assessment results saved successfully:", assessmentData);
-  } catch (error) {
-    console.error("Failed to save assessment results:", error);
-  }
+    const data = { score, total, subjectScores, timestamp: new Date().toISOString(), recommended };
+    await storage.setItem(storageKey, JSON.stringify(data));
+  } catch (e) { console.error(e); }
 };
 
-// ------------------------------------------
-
-// --- MAIN SCREEN ---
 export default function AssessmentsScreen() {
-  // --- STATE ---
   const [isQuizStarted, setIsQuizStarted] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [selectedOptionIndex, setSelectedOptionIndex] = useState<number | null>(null);
   const [score, setScore] = useState(0);
@@ -79,15 +56,10 @@ export default function AssessmentsScreen() {
   const [subjectScores, setSubjectScores] = useState<SubjectScore[]>([]);
   const [recommendedSubjects, setRecommendedSubjects] = useState<string[]>([]);
   const { user } = useAuth();
-
-  // User Answers Storage
   const [userAnswers, setUserAnswers] = useState<(number | null)[]>([]);
-
-  // Timer State
   const [timeLeft, setTimeLeft] = useState(INITIAL_TIME_SECONDS);
   const timerRef = useRef<number | null>(null);
 
-  // --- THEME COLORS ---
   const themeColors = {
     background: isDarkMode ? "#121212" : "#F8F9FA",
     textPrimary: isDarkMode ? "#FFFFFF" : "#000000",
@@ -101,403 +73,153 @@ export default function AssessmentsScreen() {
   };
 
   const currentQuestion = quizData[currentQuestionIndex];
-  const progressPercent = quizData.length > 0 
-    ? ((currentQuestionIndex + 1) / quizData.length) * 100 
-    : 0;
-  const isSubjectStart =
-    currentQuestionIndex === 0 ||
-    (currentQuestion && quizData[currentQuestionIndex - 1] && 
-     currentQuestion.subject !== quizData[currentQuestionIndex - 1].subject);
+  const progressPercent = quizData.length > 0 ? ((currentQuestionIndex + 1) / quizData.length) * 100 : 0;
+  
+  const isSubjectStart = currentQuestionIndex === 0 || (currentQuestion && quizData[currentQuestionIndex - 1] && currentQuestion.subject !== quizData[currentQuestionIndex - 1].subject);
 
-  // --- TIMER LOGIC ---
   useEffect(() => {
     if (isQuizStarted && !isQuizFinished) {
-      timerRef.current = setInterval(() => {
-        setTimeLeft((prev) => {
-          if (prev <= 1) {
-            finishQuiz(true);
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000) as unknown as number;
+      timerRef.current = setInterval(() => setTimeLeft(p => (p <= 1 ? (finishQuiz(true), 0) : p - 1)), 1000) as unknown as number;
     }
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
-    };
+    return () => { if (timerRef.current) clearInterval(timerRef.current); };
   }, [isQuizStarted, isQuizFinished]);
 
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, "0")}`;
-  };
+  const formatTime = (s: number) => `${Math.floor(s/60)}:${(s%60).toString().padStart(2,"0")}`;
 
-  const pickText = (val: any): string => {
-    if (val == null) return "";
-    if (typeof val === "string" || typeof val === "number") return String(val);
-    if (Array.isArray(val)) {
-      for (const v of val) {
-        const s = pickText(v);
-        if (s) return s;
-      }
-      return "";
-    }
-    if (typeof val === "object") {
-      const keys = [
-        "text",
-        "label",
-        "value",
-        "option",
-        "answer",
-        "title",
-        "name",
-        "content",
-        "option_text",
-        "choice_text",
-        "answer_text",
-        "description",
-      ];
-      for (const k of keys) {
-        if (k in val) {
-          const s = pickText(val[k]);
-          if (s) return s;
-        }
-      }
-      for (const v of Object.values(val)) {
-        const s = pickText(v);
-        if (s) return s;
-      }
-    }
-    return "";
-  };
-
-  const extractOptions = (q: any): string[] => {
-    const candidates = [
-      q?.options,
-      q?.choices,
-      q?.answers,
-      q?.options_map,
-      q?.optionsMap,
-      q?.choices_map,
-      q?.choicesMap,
-      q?.options_dict,
-      q?.choices_dict,
-      q?.options_by_letter,
-      q?.choices_by_letter,
-    ];
-    for (const cand of candidates) {
-      if (!cand) continue;
-      let arr: any[] = [];
-      if (Array.isArray(cand)) {
-        arr = cand;
-      } else if (typeof cand === "object") {
-        arr = Object.values(cand);
-      }
-      if (arr.length) {
-        const mapped = arr
-          .map((o: any) => pickText(o))
-          .filter((s: string) => s && s.length > 0);
-        if (mapped.length) return mapped;
-      }
-    }
-    const letters = ["A", "B", "C", "D", "E", "F", "G", "H"];
-    const letterValues: string[] = [];
-    letters.forEach((L) => {
-      const v = q?.[L] ?? q?.[L.toLowerCase()];
-      const s = pickText(v);
-      if (s) letterValues.push(s);
-    });
-    return letterValues;
-  };
-
-  // --- HANDLERS ---
   const handleStart = async () => {
     try {
-      const already = await hasTakenDiagnostic();
-      if (already) {
-        Alert.alert(
-          "Assessment already completed",
-          "You can review your results with Cognify."
-        );
+      setLoading(true);
+      if (await hasTakenDiagnostic()) {
+        Alert.alert("Completed", "You have already completed the diagnostic.");
         router.back();
         return;
       }
 
-      // Fetch all subjects first to create a mapping
-      const subjectsList = await listSubjects().catch(() => [] as any[]);
-      const subjectTitleById: Record<string, string> = {};
-      
-      (subjectsList || []).forEach((s: any) => {
-        const id = String(s?.id ?? s?.subject_id ?? "");
-        const title = String(s?.title ?? s?.subject_title ?? "");
-        if (id && title) {
-          subjectTitleById[id] = title;
-        }
-      });
+      // [FIX] Fetch ALL diagnostic type assessments (which now means 4 separate ones)
+      const assessments: any[] = await getDiagnosticAssessmentQuestions();
+      const diagnostics = assessments.filter(a => String(a.type).includes('diagnostic'));
+      const processed: QuestionData[] = [];
 
-      const SUBJECT_CODE_TITLE_MAP: Record<string, string> = {
-        SUBJ_ABNORMAL_PSYCH: "Abnormal Psychology",
-        SUBJ_DEV_PSYCH: "Developmental Psychology",
-        SUBJ_IO_PSYCH: "Industrial-Organizational Psychology",
-        SUBJ_PSYC_ASSESS: "Psychological Assessment",
-      };
-
-      console.log("Subject mapping:", subjectTitleById);
-
-      // Fetch diagnostic assessment questions
-      const items: any[] = await getDiagnosticAssessmentQuestions();
-      const diagnostics = items.filter((a) => {
-        const t = String(a?.purpose ?? a?.type ?? a?.category ?? a?.name ?? '').toLowerCase();
-        return t.includes('diagnostic') || Array.isArray(a?.questions);
-      });
-
-      const questions: QuestionData[] = [];
-      
-      diagnostics.forEach((ass, idxA) => {
-        // Get subject_id from assessment
-        const subjId = String(ass?.subject_id ?? "");
-        const fallbackSubject = ass?.subject?.title ?? ass?.subject ?? subjId;
-        const subj = String(
-          SUBJECT_CODE_TITLE_MAP[subjId] ??
-            subjectTitleById[subjId] ??
-            fallbackSubject ??
-            "General"
-        );
-
-        console.log(`Processing assessment with subject_id: ${subjId}, resolved to: ${subj}`);
-
-        const qs = Array.isArray(ass?.questions) ? ass.questions : [];
-        qs.forEach((q: any, idxQ: number) => {
-          const options = extractOptions(q);
-          let ciRaw =
-            q?.correctIndex ??
-            q?.correct_index ??
-            q?.correctChoice ??
-            q?.correct_answer ??
-            q?.correct ??
-            q?.answer_index ??
-            q?.answer;
-
-          let ciNum: number = 0;
-          if (typeof ciRaw === "number") {
-            ciNum = Number(ciRaw);
-          } else if (typeof ciRaw === "string") {
-            const upper = ciRaw.trim().toUpperCase();
-            const letterMap: Record<string, number> = { A: 0, B: 1, C: 2, D: 3, E: 4 };
-            if (letterMap[upper] !== undefined) {
-              ciNum = letterMap[upper];
-            } else {
-              const idx = options.findIndex(
-                (o) => o.trim().toUpperCase() === upper || o.trim() === ciRaw.trim()
-              );
-              ciNum = idx >= 0 ? idx : 0;
+      diagnostics.forEach(ass => {
+        const sName = ass.subject?.title || ass.title.replace("Diagnostic - ", "") || "General";
+        const sId = ass.subject_id;
+        
+        (ass.questions || []).forEach((q: any, idx: number) => {
+            const opts = q.choices || q.options || [];
+            const correct = q.correct_answers || q.answer;
+            let cIdx = 0;
+            if (typeof correct === 'string') {
+                cIdx = opts.findIndex((o: string) => o === correct);
+                if (cIdx === -1) cIdx = 0;
             }
-          } else if (Array.isArray(ciRaw)) {
-            const s = pickText(ciRaw[0]);
-            const upper = s.trim().toUpperCase();
-            const letterMap: Record<string, number> = { A: 0, B: 1, C: 2, D: 3, E: 4 };
-            if (letterMap[upper] !== undefined) {
-              ciNum = letterMap[upper];
-            } else {
-              const idx = options.findIndex(
-                (o) => o.trim().toUpperCase() === upper || o.trim() === s.trim()
-              );
-              ciNum = idx >= 0 ? idx : 0;
-            }
-          } else if (typeof ciRaw === "object" && ciRaw != null) {
-            const letter = pickText(ciRaw.letter ?? ciRaw.key ?? ciRaw.index);
-            const s = pickText(ciRaw);
-            const upper = (letter || s).trim().toUpperCase();
-            const letterMap: Record<string, number> = { A: 0, B: 1, C: 2, D: 3, E: 4 };
-            if (letterMap[upper] !== undefined) {
-              ciNum = letterMap[upper];
-            } else {
-              const idx = options.findIndex(
-                (o) => o.trim().toUpperCase() === upper || o.trim() === s.trim()
-              );
-              ciNum = idx >= 0 ? idx : 0;
-            }
-          } else {
-            ciNum = 0;
-          }
 
-          questions.push({
-            id: Number(q?.id ?? idxA * 1000 + idxQ + 1),
-            subject: subj, // Now using the resolved subject title
-            question: String(q?.question ?? q?.text ?? q?.prompt ?? ""),
-            options,
-            correctIndex: ciNum,
-          });
+            processed.push({
+                id: q.question_id || idx,
+                subject: sName,
+                question: q.text || q.question,
+                options: opts,
+                correctIndex: cIdx,
+                assessmentId: ass.id, // [FIX] Track origin
+                subjectId: sId        // [FIX] Track subject
+            });
         });
       });
 
-      if (questions.length) {
-        setQuizData(questions);
-        setUserAnswers(new Array(questions.length).fill(null));
-        setCurrentQuestionIndex(0);
-        setSelectedOptionIndex(null);
-        setScore(0);
-        setIsQuizFinished(false);
-        setIsReviewing(false);
-        setTimeLeft(INITIAL_TIME_SECONDS);
+      if (processed.length) {
+        setQuizData(processed);
+        setUserAnswers(new Array(processed.length).fill(null));
         setIsQuizStarted(true);
       } else {
-        Alert.alert("No Questions", "No diagnostic questions found.");
+        Alert.alert("Error", "No diagnostic questions found.");
         router.back();
       }
-    } catch (error) {
-      console.error("Error loading assessment:", error);
-      Alert.alert("Error", "Failed to load assessment questions.");
+    } catch (e) {
+      console.log(e);
+      Alert.alert("Error", "Failed to start.");
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleReviewPress = () => setIsReviewing(true);
   const routerBack = () => router.back();
 
-  // FIX: Updated finishQuiz to calculate and save results before setting isQuizFinished
-  const finishQuiz = (timedOut = false) => {
-    // 1. Calculate scores immediately before setting state to finished
-    const subjectScores = calculateSubjectScores();
+  const finishQuiz = async (timedOut = false) => {
+    const scores = calculateSubjectScores();
+    const recommended = scores.sort((a,b) => (a.correct/a.total)-(b.correct/b.total)).slice(0,2).map(s=>s.subject);
     
-    // 2. Compute recommendations and save
-    const recommended = recommendWeakSubjects(subjectScores, 2);
-    const storageKey = user?.id
-      ? `diagnostic_assessment_results:${user.id}`
-      : "diagnostic_assessment_results";
-    saveAssessmentResults(
-      storageKey,
-      score,
-      quizData.length,
-      subjectScores,
-      recommended
-    );
+    // Save Locally
+    const key = user?.id ? `diagnostic_assessment_results:${user.id}` : "diagnostic_assessment_results";
+    saveAssessmentResults(key, score, quizData.length, scores, recommended);
     setDiagnosticStatus(true);
-    LAST_DIAGNOSTIC_SUBJECT_SCORES = subjectScores;
-    setSubjectScores(subjectScores);
+    setSubjectScores(scores);
     setRecommendedSubjects(recommended);
 
-    try {
-      const answers = quizData.map((q, idx) => ({
-        question_id: q.id,
-        answer:
-          userAnswers[idx] != null && q.options[userAnswers[idx] as number] != null
-            ? q.options[userAnswers[idx] as number]
-            : userAnswers[idx],
-        is_correct:
-          userAnswers[idx] != null && userAnswers[idx] === q.correctIndex,
-      }));
-      const timeTaken = INITIAL_TIME_SECONDS - timeLeft;
-      const payload = {
-        user_id: user?.id,
-        assessment_id: "diagnostic",
-        subject_id: "diagnostic",
-        answers,
-        score,
-        total_items: quizData.length,
-        time_taken_seconds: timeTaken,
-      };
-      submitDiagnosticSubmission(payload).catch(() => {});
-      getDiagnosticRecommendations()
-        .then((data) => {
-          const rec = Array.isArray(data?.recommendedSubjects)
-            ? data.recommendedSubjects
-            : [];
-          if (rec.length) setRecommendedSubjects(rec.slice(0, 2));
-        })
-        .catch(() => {});
-    } catch {}
+    // [FIX] Submit Results Individually per Assessment ID
+    if (user?.id) {
+        // Group answers by assessment ID
+        const groupedAnswers: Record<string, any[]> = {};
+        
+        quizData.forEach((q, i) => {
+            if (!groupedAnswers[q.assessmentId]) groupedAnswers[q.assessmentId] = [];
+            groupedAnswers[q.assessmentId].push({
+                question_id: q.id,
+                answer: userAnswers[i] !== null ? q.options[userAnswers[i] as number] : null,
+                is_correct: userAnswers[i] === q.correctIndex
+            });
+        });
+
+        // Submit each group
+        for (const assId of Object.keys(groupedAnswers)) {
+            const answers = groupedAnswers[assId];
+            const correctCount = answers.filter(a => a.is_correct).length;
+            const targetQ = quizData.find(q => q.assessmentId === assId);
+            
+            await submitAssessmentSubmission({
+                user_id: user.id,
+                assessment_id: assId,
+                subject_id: targetQ?.subjectId || "global", // [FIX] Links to REAL Subject
+                answers: answers,
+                score: correctCount,
+                total_items: answers.length,
+            }).catch(e => console.log("Sub fail", e));
+        }
+        
+        await analyzeReadiness(user.id);
+    }
 
     setIsQuizFinished(true);
-    if (timerRef.current) clearInterval(timerRef.current);
-    if (timedOut)
-      Alert.alert("Time's Up!", "Your assessment was submitted automatically.");
+    if (timedOut) Alert.alert("Time's Up!", "Submitted.");
   };
 
   const handleNext = () => {
-    const updatedAnswers = [...userAnswers];
-    updatedAnswers[currentQuestionIndex] = selectedOptionIndex;
-    setUserAnswers(updatedAnswers);
-
-    // Only update score if an option was selected and it was correct
-    if (
-      selectedOptionIndex !== null &&
-      selectedOptionIndex === currentQuestion.correctIndex
-    ) {
-      setScore((prev) => prev + 1);
-    }
-
+    const next = [...userAnswers];
+    next[currentQuestionIndex] = selectedOptionIndex;
+    setUserAnswers(next);
+    if (selectedOptionIndex === currentQuestion.correctIndex) setScore(s => s + 1);
     if (currentQuestionIndex < quizData.length - 1) {
-      setCurrentQuestionIndex((prev) => prev + 1);
-      setSelectedOptionIndex(null);
+        setCurrentQuestionIndex(i => i + 1);
+        setSelectedOptionIndex(null);
     } else {
-      finishQuiz(false);
+        finishQuiz();
     }
   };
 
-  // --- KNOWLEDGE MAPPING CALCULATION ---
-  const calculateSubjectScores = (): SubjectScore[] => {
-    const subjectScoresMap = quizData.reduce((acc, question, index) => {
-      const subject = question.subject;
-      const isCorrect =
-        userAnswers[index] !== null &&
-        userAnswers[index] === question.correctIndex;
-
-      if (!acc[subject]) {
-        acc[subject] = { subject: subject, correct: 0, total: 0 };
-      }
-
-      acc[subject].total += 1;
-      if (isCorrect) {
-        acc[subject].correct += 1;
-      }
-
-      return acc;
-    }, {} as Record<string, SubjectScore>);
-
-    return Object.values(subjectScoresMap);
+  const calculateSubjectScores = () => {
+    const map: Record<string, SubjectScore> = {};
+    quizData.forEach((q, i) => {
+        if (!map[q.subject]) map[q.subject] = { subject: q.subject, correct: 0, total: 0 };
+        map[q.subject].total++;
+        if (userAnswers[i] === q.correctIndex) map[q.subject].correct++;
+    });
+    return Object.values(map);
   };
 
-  // ---------------------------------------------------
-  const recommendWeakSubjects = (
-    scores: SubjectScore[],
-    count = 2
-  ): string[] => {
-    const sorted = scores
-      .slice()
-      .sort((a, b) => a.correct / a.total - b.correct / b.total);
-    const n = Math.max(1, Math.min(count, sorted.length));
-    return sorted.slice(0, n).map((s) => s.subject);
-  };
+  if (loading) return <View style={{flex:1, justifyContent:'center', alignItems:'center'}}><ActivityIndicator size="large" color="#381E72"/></View>;
+  if (!isQuizStarted) return <AssessmentStartScreen onStartPress={handleStart} />;
+  if (isReviewing) return <AssessmentReviewScreen QUIZ_DATA={quizData} userAnswers={userAnswers} />;
+  if (isQuizFinished) return <AssessmentResultScreen score={score} totalQuestions={quizData.length} onReviewPress={handleReviewPress} recommendedSubjects={recommendedSubjects} subjectScores={subjectScores} />;
 
-  // --- RENDER: START SCREEN ---
-  if (!isQuizStarted) {
-    return (
-      <AssessmentStartScreen onStartPress={handleStart} />
-    );
-  }
-
-  // --- RENDER: REVIEW SCREEN ---
-  if (isReviewing) {
-    return (
-      <AssessmentReviewScreen QUIZ_DATA={quizData} userAnswers={userAnswers} />
-    );
-  }
-
-  // --- RENDER: RESULT SCREEN (FIXED) ---
-  if (isQuizFinished) {
-    return (
-      <AssessmentResultScreen
-        score={score}
-        totalQuestions={quizData.length}
-        onReviewPress={handleReviewPress}
-        recommendedSubjects={recommendedSubjects}
-        subjectScores={subjectScores}
-      />
-    );
-  }
-
-  // --- RENDER: QUIZ SCREEN ---
   return (
     <QuizScreen
       QUIZ_DATA_LENGTH={quizData.length}
