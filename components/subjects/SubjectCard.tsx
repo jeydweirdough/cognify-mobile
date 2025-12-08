@@ -1,239 +1,81 @@
-// SubjectCard.tsx
+import { Colors, Fonts } from '@/constants/cognify-theme';
+import { Subject } from '@/lib/types';
+import { Ionicons } from '@expo/vector-icons';
+import React from 'react';
+import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { Fonts } from "@/constants/cognify-theme";
-import { getStudentReportAnalytics, getSubjectTopics } from "@/lib/api";
-import { useAuth } from "@/lib/auth";
-import { router } from "expo-router";
-import React, { useEffect, useState } from "react";
-import {
-  Image,
-  Platform,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
+const CARD_COLORS = ['#E3F2FD', '#F3E5F5', '#E8F5E9', '#FFF3E0'];
 
-// Images for subjects
-const images: Record<string, any> = {
-  "Psychological Assessment": require("@/assets/images/psych_asses.png"),
-  "Developmental Psychology": require("@/assets/images/dev_psych.png"),
-  "Abnormal Psychology": require("@/assets/images/abnormal_psych.png"),
-  "Industrial-Organizational Psychology": require("@/assets/images/io_psych.png"),
-};
-
-// Define the shape of the data passed to SubjectCard
-interface SubjectCardData {
-  id: string;
-  title: string;
-  description: string;
-  // 💡 FIX: Removed 'percentage: number;' because it is now calculated internally.
-  iconColor: string;
-  iconBgColor: string;
-  cardBgColor: string;
-  totalTopics: number; // New prop: total number of topics/modules
-  topicProgressMap: Record<string, number>; // New prop: map of topicId -> progress (%)
-  topicIds: string[]; // New prop: list of all topic IDs
-  recommendationText?: string; // Optional: show recommended banner if diagnostic taken
+interface SubjectCardProps {
+  subject: Subject & { progress?: number }; // Extend type to include progress
+  index: number;
+  onPress: () => void;
 }
 
-/**
- * Static utility function to get the image source by ID.
- * This acts as the requested "static method" for image retrieval.
- * @param {string} id The subject ID.
- * @returns {any} The image source (result of require()).
- */
-const getImageSource = (id: string): any => {
-  return images[id];
-};
-
-export const SubjectCard = ({ data }: { data: SubjectCardData }) => {
-  const { user } = useAuth() as any;
-  const [backendPercentage, setBackendPercentage] = useState<number | null>(null);
-  const [subjectTitle, setSubjectTitle] = useState<string>(data.title);
-  const [subjectDescription, setSubjectDescription] = useState<string>(data.description);
-  const [subjectImageUrl, setSubjectImageUrl] = useState<string | null>(null);
-  const topicIdsWithContent = data.topicIds;
-  const totalMaterials = topicIdsWithContent.length;
-
-  let overallPercentage = 0;
-
-  if (totalMaterials > 0) {
-    const totalProgressSum = topicIdsWithContent.reduce((sum, topicId) => {
-      const progress = data.topicProgressMap[topicId] || 0;
-      return sum + progress;
-    }, 0);
-    overallPercentage = Math.round(totalProgressSum / totalMaterials);
-  }
-
-  useEffect(() => {
-    let mounted = true;
-    const run = async () => {
-      try {
-        if (!user?.id) return;
-        const res = await getStudentReportAnalytics(user.id);
-        const resData = res?.data || res;
-        const perf = Array.isArray(resData?.subject_performance) ? resData.subject_performance : [];
-        const found = perf.find((sp: any) => {
-          const sid = String(sp.subject_id ?? sp.id ?? "");
-          const st = String(sp.subject_title ?? sp.title ?? "").toLowerCase();
-          return sid === String(data.id) || st === String(data.title).toLowerCase();
-        });
-        const p = found && found.average_score != null ? Number(found.average_score) || 0 : null;
-        if (mounted) setBackendPercentage(p);
-      } catch {}
-    };
-    run();
-    return () => { mounted = false; };
-  }, [user?.id, data.id, data.title]);
-
-  useEffect(() => {
-    let mounted = true;
-    const loadSubject = async () => {
-      try {
-        const s = await getSubjectTopics(String(data.id));
-        const t = String(s?.title ?? subjectTitle ?? "");
-        const d = String(s?.description ?? subjectDescription ?? "");
-        if (mounted) {
-          if (t) setSubjectTitle(t);
-          if (d) setSubjectDescription(d);
-        }
-      } catch {}
-    };
-    loadSubject();
-    return () => { mounted = false; };
-  }, [data.id]);
-
-  const displayPercentage = backendPercentage != null ? Math.round(backendPercentage) : overallPercentage;
+export const SubjectCard: React.FC<SubjectCardProps> = ({ subject, index, onPress }) => {
+  const backgroundColor = CARD_COLORS[index % CARD_COLORS.length];
+  const progress = subject.progress || 0; // Default to 0 if missing
 
   return (
-    <View style={{ marginBottom: 20 }}>
-      <Text style={styles.subjectTitleOutside}>{subjectTitle}</Text>
-
-      <Pressable
-        style={[styles.subjectCard, { backgroundColor: data.cardBgColor }]}
-        onPress={() =>
-          router.push({
-            pathname: "/(app)/subject/[id]",
-            params: { id: data.id, subjectTitle: subjectTitle },
-          })
-        }
-      >
-        {data.recommendationText ? (
-          <View style={styles.recommendBanner}>
-            <Text style={styles.recommendText}>{data.recommendationText}</Text>
+    <Pressable
+      style={[styles.card, { backgroundColor }]}
+      onPress={onPress}
+    >
+      <View style={styles.content}>
+        <Text style={styles.title}>{subject.title}</Text>
+        <Text style={styles.subtitle}>{subject.description || 'No description'}</Text>
+        
+        {/* PROGRESS BAR SECTION */}
+        <View style={styles.progressContainer}>
+          <View style={styles.progressTrack}>
+            <View style={[styles.progressFill, { width: `${progress}%` }]} />
           </View>
-        ) : null}
-        <View style={styles.row}>
-          <View style={[styles.iconBox, { backgroundColor: data.iconBgColor }]}>
-            {subjectImageUrl ? (
-              <Image source={{ uri: subjectImageUrl }} style={styles.iconImage} resizeMode="contain" />
-            ) : (
-              <Image source={getImageSource(subjectTitle)} style={styles.iconImage} resizeMode="contain" />
-            )}
+          <Text style={styles.progressText}>{Math.round(progress)}% Completed</Text>
+        </View>
+
+        <View style={styles.footer}>
+          <View style={styles.tag}>
+            <Text style={styles.tagText}>{subject.pqf_level ? `Level ${subject.pqf_level}` : 'General'}</Text>
           </View>
-
-          {/* Right side content */}
-          <View style={styles.rightColumn}>
-            <View style={styles.descRow}>
-              <Text style={styles.description}>{subjectDescription}</Text>
-              {/* Display the CALCULATED percentage */}
-              <Text style={styles.percentageText}>{displayPercentage}%</Text>
-            </View>
-
-            <View style={styles.progressBarBackground}>
-              <View
-                style={[
-                  styles.progressFill,
-                  {
-                    // Use the CALCULATED percentage for the width
-                    width: `${displayPercentage}%`,
-                    backgroundColor: data.iconColor,
-                  },
-                ]}
-              />
-            </View>
+          <View style={styles.iconBtn}>
+            <Ionicons name="arrow-forward" size={16} color="#333" />
           </View>
         </View>
-      </Pressable>
-    </View>
+      </View>
+      
+      {/* Decorative Image (Optional) */}
+      <Image 
+        source={require('@/assets/images/book1.png')} 
+        style={styles.image}
+        resizeMode="contain"
+      />
+    </Pressable>
   );
 };
 
 const styles = StyleSheet.create({
-  // ... (styles remain the same)
-  subjectTitleOutside: {
-    fontFamily: Fonts.lexendDecaMedium,
-    fontSize: 15,
-    color: "#222",
-    marginBottom: 15,
-    marginLeft: 4,
-  },
-  subjectCard: {
+  card: {
     borderRadius: 20,
-    paddingVertical: 18,
-    paddingHorizontal: 16,
-    borderWidth: 1,
-    borderColor: "#AFAFAF",
-    ...Platform.select({
-      ios: {
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.06,
-        shadowRadius: 3,
-      },
-      android: { elevation: 1 },
-    }),
+    padding: 20,
+    marginBottom: 16,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    minHeight: 140,
+    overflow: 'hidden',
   },
-  recommendBanner: {
-    backgroundColor: "#FFF8E1",
-    borderColor: "#F6C453",
-    borderWidth: 1,
-    borderRadius: 12,
-    paddingVertical: 8,
-    paddingHorizontal: 10,
-    marginBottom: 10,
-  },
-  recommendText: {
-    fontFamily: Fonts.poppinsRegular,
-    fontSize: 12.5,
-    color: "#5A4A00",
-  },
-  row: { flexDirection: "row", alignItems: "flex-start" },
-  iconBox: {
-    width: 72,
-    height: 72,
-    borderRadius: 16,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  iconImage: { width: 50, height: 50 },
-  rightColumn: { flex: 1, marginLeft: 14, minHeight: 72, justifyContent: 'space-between' },
-  descRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-  },
-  description: {
-    flex: 1,
-    fontFamily: Fonts.poppinsRegular,
-    fontSize: 12.5,
-    color: "#000",
-    lineHeight: 18,
-    marginRight: 12,
-  },
-  percentageText: {
-    fontFamily: Fonts.poppinsMedium,
-    fontSize: 14,
-    color: "#444",
-    marginTop: 2,
-  },
-  progressBarBackground: {
-    marginTop: 8,
-    height: 6,
-    borderRadius: 6,
-    backgroundColor: "#d4d4d4ff",
-    overflow: "hidden",
-  },
-  progressFill: { height: "100%", borderRadius: 6 },
+  content: { flex: 1, marginRight: 10, justifyContent: 'space-between' },
+  title: { fontFamily: Fonts.poppinsMedium, fontSize: 17, color: '#333', lineHeight: 22 },
+  subtitle: { fontFamily: Fonts.poppinsRegular, fontSize: 12, color: '#666', marginTop: 4, marginBottom: 12 },
+  
+  // Progress Styles
+  progressContainer: { marginTop: 'auto', marginBottom: 10 },
+  progressTrack: { height: 5, backgroundColor: 'rgba(0,0,0,0.05)', borderRadius: 2.5, width: '100%', marginBottom: 4 },
+  progressFill: { height: '100%', backgroundColor: Colors.primary, borderRadius: 2.5 },
+  progressText: { fontFamily: Fonts.poppinsRegular, fontSize: 10, color: '#666' },
+
+  footer: { flexDirection: 'row', alignItems: 'center', marginTop: 4 },
+  tag: { backgroundColor: 'rgba(255,255,255,0.6)', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, marginRight: 8 },
+  tagText: { fontFamily: Fonts.poppinsMedium, fontSize: 10, color: '#333' },
+  iconBtn: { width: 28, height: 28, borderRadius: 14, backgroundColor: '#fff', justifyContent: 'center', alignItems: 'center' },
+  image: { width: 90, height: 90, position: 'absolute', right: -10, bottom: -10, opacity: 0.8 },
 });

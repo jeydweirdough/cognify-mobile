@@ -27,8 +27,9 @@ import Animated, {
 // Assuming Fonts import is available from parent context/structure
 import { Fonts } from "../../constants/cognify-theme";
 
+// [FIX] Update 'id' to accept string | number to match Backend/Parent
 interface QuestionData {
-  id: number;
+  id: string | number; 
   subject: string;
   question: string;
   options: string[];
@@ -95,6 +96,7 @@ export const QuizScreen: React.FC<QuizScreenProps> = ({
       timerScale.value = withSequence(withTiming(1.06, { duration: 180 }), withTiming(1, { duration: 180 }));
     }
   }, [timeLeft]);
+  
   return (
     <SafeAreaView
       style={[styles.container, { backgroundColor: themeColors.background }]}
@@ -292,7 +294,6 @@ export const QuizScreen: React.FC<QuizScreenProps> = ({
   );
 };
 
-// Merged styles for this component (Quiz Screen Styles)
 const styles = StyleSheet.create({
   container: { flex: 1 },
   header: {
