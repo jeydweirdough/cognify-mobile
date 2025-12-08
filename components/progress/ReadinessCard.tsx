@@ -4,6 +4,7 @@ import { useAuth } from "@/lib/auth";
 import React, { useEffect, useState } from "react";
 import { Platform, StyleSheet, Text, View } from "react-native";
 import { CircularProgress } from "../subjects/CircularProgress";
+import { analyzeReadiness } from "@/lib/api";
 
 const Colors = { white: "#FFFFFF" };
 

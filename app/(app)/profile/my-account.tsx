@@ -4,16 +4,16 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
 import {
-    ActivityIndicator,
-    Animated,
-    Dimensions,
-    ScrollView,
-    StyleSheet,
-    Switch,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Animated,
+  Dimensions,
+  ScrollView,
+  StyleSheet,
+  Switch,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 
 // --- Types ---
@@ -200,7 +200,7 @@ export default function MyAccountScreen() {
             v !== null &&
             v !== undefined &&
             v !== "" &&
-            v !== user[key as keyof User]
+            v !== user[key as keyof typeof user]
         )
       ) as Partial<User>;
 

@@ -15,57 +15,12 @@ import {
   Text,
   TextInput,
   View,
-} from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+} from 'react-native';
+import { SubjectCard } from '@/components/subjects/SubjectCard';
 
-// Assuming these are defined elsewhere or passed correctly
-import { AddSubjectModal } from "@/components/subjects/AddSubjectModal";
-import MotivationCard from "@/components/subjects/Motivation-quote";
-import { SubjectCard } from "@/components/subjects/SubjectCard";
-import Header from "@/components/ui/header";
-
-const Colors = {
-  background: "#F8F8F8",
-  white: "#FFFFFF",
-  text: "#333333",
-  primary: "#6A2A94",
-};
-
-// Re-defining Fonts object locally for completeness if it's not imported correctly
-const Fonts = {
-  semiBold: "LexendDeca-Medium",
-  regular: "LexendDeca-Regular",
-  poppinsRegular: "Poppins-Regular",
-};
-
-const COLOR_PALETTE = [
-  { iconColor: "#D8C713", iconBgColor: "#F0F5D5", cardBgColor: "#FDFFB8" },
-  { iconColor: "#4C609B", iconBgColor: "#E2E6F2", cardBgColor: "#FFE8CD" },
-  { iconColor: "#30C49F", iconBgColor: "#FCF5EE", cardBgColor: "#FCF5EE" },
-  { iconColor: "#D38A4D", iconBgColor: "#F9ECE3", cardBgColor: "#F4F8D3" },
-];
-
-// Define the expected structure of a Subject item returned from the backend's list endpoint
-interface BackendSubject {
-  id: string;
-  title: string;
-  description?: string;
-  topics_count: number;
-  [key: string]: any;
-}
-
-// Define the enriched Subject structure for the UI
-interface UISubject {
-  id: string;
-  title: string;
-  description: string;
-  iconColor: string;
-  iconBgColor: string;
-  cardBgColor: string;
-  topicIds: string[]; // List of topic IDs for progress calculation
-}
-
-export default function LearningScreen() {
+export default function SubjectsScreen() {
+  const { user } = useAuth();
+  const [subjects, setSubjects] = useState<Subject[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
