@@ -99,14 +99,27 @@ export default function ModuleReadingScreen() {
       } catch {}
 
       // Load Assessment (Correctly filters using backend param)
-      try {
+       try {
         const assessments = await listAssessmentsByModule(String(id));
         const first = Array.isArray(assessments) ? assessments[0] : undefined;
         if (mounted && first) {
           setHasVerifiedAssessment(true);
           setAssessmentId(first.id);
-          const ok = await hasTakenAssessment(first.id);
-          setHasTakenThisAssessment(!!ok);
+          const ok: any = await hasTakenAssessment(first.id);
+
+          // Normalize different possible API responses to a boolean
+          let taken = false;
+          if (typeof ok === 'boolean') {
+            taken = ok;
+          } else if (typeof ok === 'number') {
+            taken = ok === 1;
+          } else if (typeof ok === 'string') {
+            taken = ok.toLowerCase() === 'true' || ok === '1';
+          } else if (ok && typeof ok === 'object') {
+            taken = Boolean(ok.taken ?? ok.has_taken ?? ok.data ?? ok.is_taken ?? ok.result ?? false);
+          }
+
+          setHasTakenThisAssessment(taken);
         }
       } catch {}
 

@@ -42,7 +42,7 @@ export const SubjectCard: React.FC<SubjectCardProps> = ({ subject, index, onPres
 
         <View style={styles.footer}>
           <View style={styles.tag}>
-            <Text style={styles.tagText}>{subject.pqf_level ? `Level ${subject.pqf_level}` : 'General'}</Text>
+            <Text style={styles.tagText}>TOS subject</Text>
           </View>
           <View style={styles.iconBtn}>
             <Ionicons name="arrow-forward" size={16} color="#333" />
@@ -95,7 +95,7 @@ const styles = StyleSheet.create({
     marginTop: 4 
   },
   tag: { 
-    backgroundColor: 'rgba(255,255,255,0.6)', 
+    backgroundColor: 'rgba(228, 228, 228, 0.6)', 
     paddingHorizontal: 10, 
     paddingVertical: 4, 
     borderRadius: 12, 
