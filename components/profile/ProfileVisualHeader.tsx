@@ -1,177 +1,196 @@
-import React from "react";
-import { View, Text, Pressable, StyleSheet, Image } from "react-native";
-import { FontAwesome } from "@expo/vector-icons";
 import { useAuth } from "@/lib/auth";
-import { useRouter } from "expo-router";
+import { FontAwesome5 } from "@expo/vector-icons";
+import React from "react";
+import {
+  ActivityIndicator,
+  Image,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 
-// We no longer need the local asset unless it's a very last resort static image
-// const profileAvatar = require("@/assets/images/profile.png");
-
-/**
- * Component to render a placeholder avatar with initials.
- */
-interface InitialsAvatarProps {
-  initials: string;
-  size: number;
+interface Props {
+  onEditPress: () => void;
+  isUploading?: boolean;
 }
-const InitialsAvatar = ({ initials, size }: InitialsAvatarProps) => (
-  <View
-    style={[
-      styles.initialsAvatar,
-      { width: size, height: size, borderRadius: size / 2 },
-    ]}
-  >
-    <Text style={[styles.initialsText, { fontSize: size * 0.4 }]}>
-      {initials.toUpperCase()}
-    </Text>
-  </View>
-);
 
-const ProfileVisualHeader = () => {
+const ProfileVisualHeader = ({ onEditPress, isUploading = false }: Props) => {
   const { user } = useAuth();
-  const router = useRouter();
 
-  // 1. Get the profile image URL (assuming 'profile_picture' is the key from EditProfileScreen)
   const profileImageUrl = user?.profile_picture;
-
-  // 2. Get initials for the fallback avatar
-  const firstNameInitial = user?.first_name?.charAt(0) || "";
-  const initials = firstNameInitial;
-
-  // 3. Display names and fallback logic (unchanged from your original logic)
-  const fullNameDisplay = user?.first_name ? user.first_name : "User";
-
-  const usernameOrEmailDisplay =
-    user?.username && user.username.trim().length > 0
-      ? `@${user.username}`
-      : "(create username)";
-
-  const userId = user?.id ? String(user.id) : "1";
+  const firstNameInitial = user?.first_name?.charAt(0) || "U";
+  const fullNameDisplay = user?.first_name
+    ? `${user.first_name} ${user.last_name || ""}`
+    : "User";
+  const usernameOrEmailDisplay = user?.username
+    ? `@${user.username}`
+    : "@student";
 
   return (
-    <View style={styles.visualHeaderContainer}>
-      <View style={styles.visualHeaderContent}>
-        <View style={styles.avatarWrapper}>
-          {/* CONDITIONAL RENDERING: Check for image URL first */}
+    <View style={styles.container}>
+      <View style={styles.card}>
+        {/* Avatar Section */}
+        <TouchableOpacity
+          style={styles.avatarWrapper}
+          onPress={onEditPress}
+          disabled={isUploading}
+          activeOpacity={0.8}
+        >
           {profileImageUrl ? (
             <Image
               source={{ uri: profileImageUrl }}
               style={styles.avatarImage}
             />
           ) : (
-            // FALLBACK: Render Initials Avatar if no URL is present
-            <InitialsAvatar initials={initials} size={112} /> // 120 - 2*4 padding
+            <View style={styles.initialsAvatar}>
+              <Text style={styles.initialsText}>
+                {firstNameInitial.toUpperCase()}
+              </Text>
+            </View>
           )}
-        </View>
 
-        <View style={styles.textAndButtonContainer}>
-          <Text style={styles.displayName}>{fullNameDisplay}</Text>
-          <Text style={styles.username}>{usernameOrEmailDisplay}</Text>
+          {/* Loading Overlay */}
+          {isUploading && (
+            <View style={styles.loadingOverlay}>
+              <ActivityIndicator size="small" color="#333" />
+            </View>
+          )}
 
-          <Pressable
-            style={styles.editProfileButton}
-            onPress={() =>
-              router.push({
-                pathname: "/profile/[id]",
-                params: { id: userId },
-              })
-            }
-          >
-            <FontAwesome name="edit" size={16} color="#FFF" />
-            <Text style={styles.editProfileButtonText}>Edit Profile</Text>
-          </Pressable>
+          {/* Edit Pencil Badge */}
+          {!isUploading && (
+            <View style={styles.editIconContainer}>
+              <FontAwesome5 name="pen" size={10} color="#3D365C" />
+            </View>
+          )}
+        </TouchableOpacity>
+
+        {/* Text Section */}
+        <View style={styles.textContainer}>
+          <Text style={styles.displayName} numberOfLines={1}>
+            {fullNameDisplay}
+          </Text>
+          <Text style={styles.username} numberOfLines={1}>
+            {usernameOrEmailDisplay}
+          </Text>
+
+          {/* Badge */}
+          <View style={styles.badgeContainer}>
+            <Text style={styles.badgeText}>Future RPm</Text>
+          </View>
         </View>
       </View>
     </View>
   );
 };
 
-// ... (Styles remain exactly the same as before)
 const styles = StyleSheet.create({
-  visualHeaderContainer: {
-    backgroundColor: "#3D365C",
-    marginHorizontal: 20,
-    marginTop: 20,
-    marginBottom: 0,
-    borderRadius: 16,
-    padding: 20,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 10,
-    elevation: 8,
-  },
-  visualHeaderContent: {
-    flexDirection: "row",
-    paddingHorizontal: 10,
-    alignItems: "center",
-  },
-  // The wrapper defines the overall size and border
-  avatarWrapper: {
-    width: 120,
-    height: 120,
-    borderRadius: 16,
-    backgroundColor: "#FFF",
-    padding: 4,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 5,
-    elevation: 5,
-    // Add alignment for the InitialAvatar component
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  // Style for the actual profile image (fills the wrapper)
-  avatarImage: {
+  container: {
     width: "100%",
-    height: "100%",
-    borderRadius: 12, // Slightly smaller radius than wrapper for effect
+    marginBottom: 16,
+    marginTop: 10,
   },
-  // NEW STYLE for the Initials Avatar background
+  card: {
+    backgroundColor: "#3D365C",
+    borderRadius: 16, // UPDATED: Consistent 16px radius
+    padding: 24,
+    flexDirection: "row",
+    alignItems: "center",
+
+    // Consistent Shadow
+    shadowColor: "#3D365C",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  // --- Avatar ---
+  avatarWrapper: {
+    position: "relative",
+    width: 84,
+    height: 84,
+    marginRight: 20,
+  },
+  avatarImage: {
+    width: 84,
+    height: 84,
+    borderRadius: 42,
+    borderWidth: 3,
+    borderColor: "rgba(255,255,255,0.15)",
+  },
   initialsAvatar: {
-    backgroundColor: "#d746f7ff", // Gray background as requested
+    width: 84,
+    height: 84,
+    borderRadius: 42,
+    backgroundColor: "#FF6B6B", // Vibrant Coral
     justifyContent: "center",
     alignItems: "center",
-    // Note: size and border radius are set inline in the component call
+    borderWidth: 3,
+    borderColor: "rgba(255,255,255,0.15)",
   },
-  // NEW STYLE for the Initials text
   initialsText: {
-    color: "#f9eeeeff", // White text
+    color: "#FFF",
     fontWeight: "bold",
+    fontSize: 34,
   },
-  textAndButtonContainer: {
+  editIconContainer: {
+    position: "absolute",
+    bottom: 0,
+    right: 0,
+    backgroundColor: "#FFF",
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 2,
+    borderColor: "#3D365C", // Blend with bg
+  },
+  loadingOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    borderRadius: 42,
+    backgroundColor: "rgba(255,255,255,0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  // --- Text Info ---
+  textContainer: {
     flex: 1,
-    marginLeft: 15,
     justifyContent: "center",
   },
   displayName: {
-    fontSize: 24,
-    fontWeight: "700",
+    fontSize: 22,
+    fontWeight: "800",
     color: "#FFF",
-    marginBottom: 1,
+    marginBottom: 4,
+    letterSpacing: 0.3,
   },
   username: {
-    fontSize: 16,
-    color: "rgba(255, 255, 255, 0.7)",
-    marginBottom: 5,
+    fontSize: 14,
+    color: "rgba(255, 255, 255, 0.6)",
+    marginBottom: 12,
+    fontWeight: "500",
   },
-  editProfileButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    alignSelf: "flex-start",
-    backgroundColor: "rgba(255, 255, 255, 0.2)",
+  // --- Badge ---
+  badgeContainer: {
+    backgroundColor: "rgba(0, 0, 0, 0.3)",
     borderRadius: 10,
-    paddingVertical: 8,
-    paddingHorizontal: 15,
-    gap: 8,
-    marginTop: 5,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    alignSelf: "flex-start",
+    borderWidth: 1,
+    borderColor: "rgba(255,215,0,0.1)", // Subtle gold border
   },
-  editProfileButtonText: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: "#FFF",
+  badgeText: {
+    fontSize: 11,
+    fontWeight: "800",
+    color: "#FFD700", // Gold
+    letterSpacing: 0.8,
+    textTransform: "uppercase",
   },
 });
 

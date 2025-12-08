@@ -2,19 +2,65 @@ import Header from "@/components/ui/header";
 import { Feather } from "@expo/vector-icons";
 import { useFonts } from "expo-font";
 import React, { useEffect, useState } from "react";
-import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from "react-native";
+import {
+  ActivityIndicator,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 const Colors = {
-  background: "#F8F8F8",
+  background: "#F4F6F9", // Slightly cooler gray for a modern feel
   white: "#FFFFFF",
-  text: "#333333",
+  textPrimary: "#1A1A1A",
+  textSecondary: "#666666",
+  textTertiary: "#999999",
   primary: "#6A2A94",
+  border: "#EFF0F6",
 };
 
 const Fonts = {
   semiBold: "LexendDeca-Medium",
 };
+
+// Interface for props
+interface NotificationCardProps {
+  icon: keyof typeof Feather.glyphMap;
+  color: string;
+  title: string;
+  subtitle: string;
+  time: string;
+  isNew?: boolean;
+}
+
+// Reusable Card Component
+const NotificationCard = ({
+  icon,
+  color,
+  title,
+  subtitle,
+  time,
+  isNew,
+}: NotificationCardProps) => (
+  <View style={[styles.card, isNew && styles.cardNew]}>
+    {/* Dynamic background color based on the icon color (using opacity) */}
+    <View style={[styles.iconContainer, { backgroundColor: `${color}15` }]}>
+      <Feather name={icon} size={22} color={color} />
+    </View>
+    <View style={styles.cardContent}>
+      <View style={styles.headerRow}>
+        <Text style={styles.cardTitle}>{title}</Text>
+        <Text style={styles.cardTime}>{time}</Text>
+      </View>
+      <Text style={styles.cardSubtitle} numberOfLines={2}>
+        {subtitle}
+      </Text>
+    </View>
+    {isNew && <View style={styles.newIndicator} />}
+  </View>
+);
 
 export default function NotificationsScreen() {
   const [loading, setLoading] = useState(true);
@@ -30,92 +76,79 @@ export default function NotificationsScreen() {
 
   if (loading || !fontsLoaded) {
     return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.centered}>
-          <ActivityIndicator size="large" color={Colors.primary} />
-        </View>
+      <SafeAreaView style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={Colors.primary} />
       </SafeAreaView>
     );
   }
 
   return (
-   <SafeAreaView style={{ flex: 1, backgroundColor: Colors.background }}>
+    <SafeAreaView style={styles.container}>
       <Header title="Notifications" />
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        <View style={styles.sectionHeaderWrap}>
+
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* NEW SECTION */}
+        <View style={styles.sectionContainer}>
           <Text style={styles.sectionHeader}>New</Text>
+
+          <NotificationCard
+            icon="book-open"
+            color="#FF9F1C"
+            title="New Study Material"
+            subtitle="Developmental Psychology • A new lecture has been added."
+            time="2h"
+            isNew={true}
+          />
+
+          <NotificationCard
+            icon="bell"
+            color="#E83F5B"
+            title="Diagnostic Result"
+            subtitle="View your subject recommendations based on your assessment."
+            time="1d"
+            isNew={true}
+          />
+
+          <NotificationCard
+            icon="check-circle"
+            color="#2E7D32"
+            title="Quiz Due Tomorrow"
+            subtitle="Abnormal Psychology • Anxiety Disorders module quiz is due."
+            time="1d"
+            isNew={true}
+          />
         </View>
 
-        <View style={styles.itemRow}>
-          <View style={styles.iconWrap}>
-            <Feather name="book-open" size={20} color="#FF9F1C" />
-          </View>
-          <View style={styles.itemContent}>
-            <Text style={styles.itemTitle}>New Study Material Uploaded</Text>
-            <Text style={styles.itemSubtitle}>Developmental Psychology • A new lecture has been added.</Text>
-          </View>
-          <Text style={styles.itemTime}>2h</Text>
-        </View>
-
-        <View style={styles.itemRow}>
-          <View style={styles.iconWrap}>
-            <Feather name="bell" size={20} color="#E83F5B" />
-          </View>
-          <View style={styles.itemContent}>
-            <Text style={styles.itemTitle}>Diagnostic Result Available</Text>
-            <Text style={styles.itemSubtitle}>View your subject recommendations based on your assessment.</Text>
-          </View>
-          <Text style={styles.itemTime}>1d</Text>
-        </View>
-
-        <View style={styles.itemRow}>
-          <View style={styles.iconWrap}>
-            <Feather name="check-circle" size={20} color="#2E7D32" />
-          </View>
-          <View style={styles.itemContent}>
-            <Text style={styles.itemTitle}>Quiz Due Tomorrow</Text>
-            <Text style={styles.itemSubtitle}>Abnormal Psychology • Anxiety Disorders module quiz is due.</Text>
-          </View>
-          <Text style={styles.itemTime}>1d</Text>
-        </View>
-
-        <View style={styles.sectionDivider} />
-
-        <View style={styles.sectionHeaderWrap}>
+        {/* EARLIER SECTION */}
+        <View style={styles.sectionContainer}>
           <Text style={styles.sectionHeader}>Earlier</Text>
-        </View>
 
-        <View style={styles.itemRow}>
-          <View style={styles.iconWrap}>
-            <Feather name="file-text" size={20} color="#6A2A94" />
-          </View>
-          <View style={styles.itemContent}>
-            <Text style={styles.itemTitle}>Subject Progress Updated</Text>
-            <Text style={styles.itemSubtitle}>Industrial-Organizational Psychology • Reading progress saved.</Text>
-          </View>
-          <Text style={styles.itemTime}>3d</Text>
-        </View>
+          <NotificationCard
+            icon="file-text"
+            color="#6A2A94"
+            title="Subject Progress Updated"
+            subtitle="Industrial-Organizational Psychology • Reading progress saved."
+            time="3d"
+          />
 
-        <View style={styles.itemRow}>
-          <View style={styles.iconWrap}>
-            <Feather name="award" size={20} color="#FFC107" />
-          </View>
-          <View style={styles.itemContent}>
-            <Text style={styles.itemTitle}>Analytics Report Generated</Text>
-            <Text style={styles.itemSubtitle}>Your subject performance analytics have been refreshed.</Text>
-          </View>
-          <Text style={styles.itemTime}>6d</Text>
-        </View>
+          <NotificationCard
+            icon="bar-chart-2"
+            color="#FFC107"
+            title="Analytics Report Generated"
+            subtitle="Your subject performance analytics have been refreshed."
+            time="6d"
+          />
 
-        <View style={styles.itemRow}>
-          <View style={styles.iconWrap}>
-            <Feather name="clock" size={20} color="#999999" />
-          </View>
-          <View style={styles.itemContent}>
-            <Text style={styles.itemTitle}>Profile Updated</Text>
-            <Text style={styles.itemSubtitle}>Your account details were successfully updated.</Text>
-          </View>
-          <Text style={styles.itemTime}>13d</Text>
+          <NotificationCard
+            icon="user"
+            color="#5C5C5C"
+            title="Profile Updated"
+            subtitle="Your account details were successfully updated."
+            time="13d"
+          />
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -127,64 +160,96 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.background,
   },
-  centered: {
+  loadingContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
+    backgroundColor: Colors.background,
   },
   scrollContent: {
     paddingHorizontal: 20,
-    paddingBottom: 30,
-    paddingTop: 10,
+    paddingTop: 16,
+    paddingBottom: 40,
   },
-  sectionHeaderWrap: {
-    paddingVertical: 12,
+  sectionContainer: {
+    marginBottom: 24,
   },
   sectionHeader: {
     fontFamily: Fonts.semiBold,
-    fontSize: 13,
-    color: "#7A7A7A",
+    fontSize: 14,
+    color: Colors.textTertiary,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+    marginBottom: 12,
+    marginLeft: 4,
   },
-  sectionDivider: {
-    height: 1,
-    backgroundColor: "#EAEAEA",
-    marginVertical: 12,
-  },
-  itemRow: {
+  // Card Styles
+  card: {
     flexDirection: "row",
     alignItems: "flex-start",
     backgroundColor: Colors.white,
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 10,
-    borderWidth: 1,
-    borderColor: "#E6E6E6",
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 12,
+    // Soft Shadow
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 3,
+    position: "relative",
   },
-  iconWrap: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+  cardNew: {
+    borderLeftWidth: 3,
+    borderLeftColor: Colors.primary,
+  },
+  iconContainer: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     justifyContent: "center",
     alignItems: "center",
-    marginRight: 12,
-    backgroundColor: "#F7F7F7",
+    marginRight: 14,
   },
-  itemContent: {
+  cardContent: {
     flex: 1,
+    justifyContent: "center",
   },
-  itemTitle: {
-    fontFamily: Fonts.semiBold,
-    fontSize: 14,
-    color: Colors.text,
+  headerRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: 4,
   },
-  itemSubtitle: {
-    fontSize: 12,
-    color: "#777777",
+  cardTitle: {
+    fontFamily: Fonts.semiBold,
+    fontSize: 15,
+    color: Colors.textPrimary,
+    flex: 1,
+    marginRight: 8,
   },
-  itemTime: {
+  cardTime: {
     fontSize: 12,
-    color: "#999999",
-    marginLeft: 12,
+    color: Colors.textTertiary,
+    fontWeight: "500",
+  },
+  cardSubtitle: {
+    fontSize: 13,
+    color: Colors.textSecondary,
+    lineHeight: 18,
+  },
+  newIndicator: {
+    position: "absolute",
+    top: 16,
+    right: 16,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: Colors.primary,
+    opacity: 0, // Set to 1 if you want a red dot indicator
   },
 });
+ 

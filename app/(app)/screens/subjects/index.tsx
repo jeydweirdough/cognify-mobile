@@ -18,7 +18,6 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 // Assuming these are defined elsewhere or passed correctly
 import { AddSubjectModal } from "@/components/subjects/AddSubjectModal";
-import MotivationCard from "@/components/subjects/Motivation-quote";
 import { SubjectCard } from "@/components/subjects/SubjectCard";
 import Header from "@/components/ui/header";
 

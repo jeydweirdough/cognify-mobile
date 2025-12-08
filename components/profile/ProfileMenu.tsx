@@ -1,88 +1,150 @@
-import React from "react";
-import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
+import React from "react";
+import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
-// Add navigation prop
-export default function ProfileMenu({ onLogout, navigation }: { onLogout: () => void, navigation: any }) {
-  // Define the navigation handler for My Account
-  const handleMyAccountPress = () => {
-    // Navigate to the profile route with a placeholder ID (e.g., '123')
-    // Replace '123' with the actual user ID when available
-    navigation.navigate("/profile/[id]");
+interface Props {
+  onLogout: () => void;
+}
+
+export default function ProfileMenu({ onLogout }: Props) {
+  const router = useRouter();
+
+  // Reusable Row Component
+  const MenuRow = ({
+    label,
+    icon,
+    color,
+    bgColor,
+    route,
+    isDestructive,
+    onPress,
+    isLast,
+  }: any) => {
+    const handlePress = onPress || (() => (route ? router.push(route) : null));
+
+    return (
+      <TouchableOpacity
+        style={[styles.row, isLast && styles.lastRow]}
+        onPress={handlePress}
+        activeOpacity={0.7}
+      >
+        {/* Icon Bubble */}
+        <View style={[styles.iconBox, { backgroundColor: bgColor }]}>
+          <Ionicons name={icon} size={20} color={color} />
+        </View>
+
+        {/* Text Content */}
+        <View style={styles.content}>
+          <Text
+            style={[styles.label, isDestructive && styles.destructiveLabel]}
+          >
+            {label}
+          </Text>
+        </View>
+
+        {/* Chevron (Hidden for Logout/Destructive items usually, or keep consistent) */}
+        {!isDestructive ? (
+          <Ionicons name="chevron-forward" size={20} color="#CBD5E1" />
+        ) : null}
+      </TouchableOpacity>
+    );
   };
 
   return (
     <View style={styles.container}>
-      {/* 1. Add onPress prop to My Account and link it to the handler */}
-      <MenuItem 
-        label="My Account" 
-        icon="settings-outline" 
-        onPress={handleMyAccountPress} 
-      />
-      <MenuItem label="Offline Materials" icon="settings-outline" />
-      <MenuItem label="Progress Overview" icon="settings-outline" />
-      <MenuItem label="Help and Support" icon="settings-outline" />
+      <View style={styles.menuWrapper}>
+        <MenuRow
+          label="My Account"
+          icon="person"
+          color="#3B82F6" // Blue
+          bgColor="#EFF6FF" // Pastel Blue
+          route="/profile/my-account"
+        />
 
-      <MenuItem
-        label="Logout"
-        icon="settings-outline"
-        onPress={onLogout}
-      />
-    </View>
-  );
-}
+        <MenuRow
+          label="Offline Materials"
+          icon="cloud-download"
+          color="#10B981" // Green
+          bgColor="#ECFDF5" // Pastel Green
+          route="/profile/offline-materials"
+        />
 
-// ... MenuItem and styles remain the same ...
+        <MenuRow
+          label="Help & Support"
+          icon="help-buoy"
+          color="#F59E0B" // Orange
+          bgColor="#FFFBEB" // Pastel Orange
+          route="/profile/help-support"
+        />
 
-function MenuItem({
-  label,
-  icon,
-  onPress,
-}: {
-  label: string;
-  icon: any;
-  onPress?: () => void;
-}) {
-  return (
-    <TouchableOpacity style={styles.item} onPress={onPress}>
-      <View style={styles.left}>
-        <Ionicons name={icon} size={22} color="#000" />
-        <Text style={styles.label}>{label}</Text>
+        {/* Logout is now part of the list */}
+        <MenuRow
+          label="Log Out"
+          icon="log-out-outline"
+          color="#a10d0dff" // Red Icon
+          bgColor="#FEF2F2" // Pastel Red BG
+          onPress={onLogout}
+          isDestructive
+          isLast // Removes the border bottom
+        />
       </View>
-
-      <Ionicons name="chevron-forward" size={20} color="#777" />
-    </TouchableOpacity>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    borderWidth: 1,
-    borderColor: "#838383",
-    borderRadius: 16,
-    paddingVertical: 8,
-    marginHorizontal: 5,
-    marginTop: 15,
+    width: "100%",
+    paddingBottom: 40,
+  },
+  // The single container for all items
+  menuWrapper: {
     backgroundColor: "#FFFFFF",
-  },
+    borderRadius: 16,
+    overflow: "hidden", // Ensures children don't bleed out of rounded corners
 
-  item: {
+    // Soft Shadow
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+
+    borderWidth: 1,
+    borderColor: "#F0F0F0",
+  },
+  // Row Styles
+  row: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
-    paddingVertical: 18,
-    paddingHorizontal: 25,
+    padding: 16,
+    backgroundColor: "#FFFFFF",
+    borderBottomWidth: 1,
+    borderBottomColor: "#F3F4F6", // Light divider
   },
-
-  left: {
-    flexDirection: "row",
+  lastRow: {
+    borderBottomWidth: 0,
+  },
+  // Icon Styles
+  iconBox: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: "center",
     alignItems: "center",
-    gap: 15,
+    marginRight: 16,
   },
-
+  content: {
+    flex: 1,
+  },
   label: {
-    fontSize: 16,
-    color: "#1f2844ff",
+    fontSize: 15,
     fontWeight: "500",
+    color: "#333",
+    fontFamily: "LexendDeca-Medium",
+  },
+  destructiveLabel: {
+    color: "#c42121ff", // Red text for Logout
   },
 });

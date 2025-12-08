@@ -1,9 +1,9 @@
+import { Fonts } from "@/constants/cognify-theme";
+import { getStudentReportAnalytics } from "@/lib/api";
+import { useAuth } from "@/lib/auth";
 import React, { useEffect, useState } from "react";
 import { Platform, StyleSheet, Text, View } from "react-native";
 import { CircularProgress } from "../subjects/CircularProgress";
-import { useAuth } from "@/lib/auth";
-import { getStudentReportAnalytics } from "@/lib/api";
-import { Fonts } from "@/constants/cognify-theme";
 
 const Colors = {
   white: "#FFFFFF",

@@ -1,6 +1,6 @@
+import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import React from "react";
-import { View, Text, StyleSheet, Pressable } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 
 interface Props {
   note: string;
@@ -9,48 +9,89 @@ interface Props {
 
 export default function PersonalNoteCard({ note, onEdit }: Props) {
   return (
-    <View style={styles.card}>
-      <Text style={styles.label}>Personal Note:</Text>
+    <Pressable onPress={onEdit} style={styles.container}>
+      <View style={styles.card}>
+        <View style={styles.headerRow}>
+          <View style={styles.iconCircle}>
+            <MaterialCommunityIcons name="target" size={18} color="#D97706" />
+          </View>
+          <Text style={styles.headerTitle}>Daily Goal</Text>
+        </View>
 
-      <Text style={styles.note}>{note}</Text>
+        <Text style={styles.noteText} numberOfLines={3}>
+          {note || "Set a goal to keep yourself motivated!"}
+        </Text>
 
-      <Pressable style={styles.editBtn} onPress={onEdit}>
-        <Ionicons name="create-outline" size={20} color="#333" />
-      </Pressable>
-    </View>
+        <View style={styles.footerRow}>
+          <Text style={styles.tapText}>Tap to edit</Text>
+          <Ionicons name="pencil" size={12} color="#B45309" />
+        </View>
+      </View>
+    </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
+  container: {
+    width: "100%",
+    marginBottom: 16,
+  },
   card: {
-    backgroundColor: "#F4FFCC",
-    borderRadius: 16,
-    paddingVertical: 30,
-    paddingHorizontal: 20,
-    marginHorizontal: 5,
-    marginTop: 1,
-    position: "relative",
-    borderColor: "#838383",
+    backgroundColor: "#FFFBEB", // Warm Cream
+    borderRadius: 16, // Consistent Radius
+    padding: 20,
+
+    // Consistent Shadow
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    elevation: 2,
+
     borderWidth: 1,
+    borderColor: "#FEF3C7", // Subtle yellow border
   },
-  label: {
+  headerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 12,
+    gap: 8,
+  },
+  iconCircle: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: "rgba(217, 119, 6, 0.15)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  headerTitle: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#D97706",
+    fontFamily: "LexendDeca-Medium",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
+  noteText: {
     fontSize: 14,
-    color: "#6B6B6B",
-    textAlign: "center",
-    marginBottom: 10,
-    marginTop: -10,
+    color: "#451A03",
+    lineHeight: 24,
     fontWeight: "500",
-  },
-  note: {
-    fontSize: 16,
+    fontFamily: "LexendDeca-Regular",
+    marginBottom: 12,
     textAlign: "center",
-    color: "#000",
-    lineHeight: 30,
-    paddingHorizontal: 30,
   },
-  editBtn: {
-    position: "absolute",
-    right: 14,
-    bottom: 10,
+  footerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "flex-end",
+    gap: 4,
+    opacity: 0.7,
+  },
+  tapText: {
+    fontSize: 11,
+    color: "#B45309",
+    fontWeight: "600",
   },
 });

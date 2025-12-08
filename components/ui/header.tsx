@@ -1,5 +1,5 @@
 import React from "react";
-import { View, Text, StyleSheet, SafeAreaView, StatusBar } from "react-native"; 
+import { SafeAreaView, StatusBar, StyleSheet, Text, View } from "react-native";
 
 interface HeaderProps {
   title: string;
