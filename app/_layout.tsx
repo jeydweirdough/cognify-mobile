@@ -1,6 +1,7 @@
 import { Href, Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
+import { LogBox } from 'react-native';
 import { AuthProvider, useAuth } from '../lib/auth';
 
 // --- IMPORT THE NEW SCREEN ---
@@ -14,6 +15,13 @@ import {
   useFonts,
 } from '@expo-google-fonts/poppins';
 import * as SplashScreen from 'expo-splash-screen';
+
+LogBox.ignoreAllLogs(true);
+if (!__DEV__) {
+  ['log', 'info', 'warn', 'error', 'debug', 'trace'].forEach((m) => {
+    (console as any)[m] = () => {};
+  });
+}
 
 SplashScreen.preventAutoHideAsync();
 

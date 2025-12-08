@@ -54,9 +54,7 @@ export default function ProfileScreen() {
         await new Promise((resolve) => setTimeout(resolve, 1500));
         await updateProfile({ profile_picture: selectedUri });
 
-        Platform.OS === "web"
-          ? alert("Profile photo updated!")
-          : Alert.alert("Success", "Profile photo updated!");
+        
       } catch (error) {
         console.error(error);
         alert("Failed to update profile picture.");
