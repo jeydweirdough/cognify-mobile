@@ -1,15 +1,15 @@
-import React from "react";
-import { View, Text, StyleSheet } from "react-native";
 import { Feather } from "@expo/vector-icons";
+import React from "react";
+import { StyleSheet, Text, View } from "react-native";
 
 const Colors = {
-  text: "#000", 
-  cardBg: "#F4FFCC",
-  border: "#afaeaeff", // subtle border
+  text: "#2D1F2C", // Dark purple/black text
+  cardBg: "#FFF9E6", // Cream/Yellow tint matching "Daily Goal"
+  border: "#EAD4AA", // Soft gold/tan border
 };
 
 const Fonts = {
-  regular: "LexendDeca-Regular", 
+  regular: "LexendDeca-Regular",
 };
 
 type Achievement = {
@@ -21,7 +21,12 @@ type Achievement = {
 
 const MOCK_ACHIEVEMENTS: Achievement[] = [
   { id: "streak", iconName: "zap", value: "0", label: "Days Streak" },
-  { id: "lessons", iconName: "check-circle", value: "0", label: "Lessons Completed" },
+  {
+    id: "lessons",
+    iconName: "check-circle",
+    value: "0",
+    label: "Lessons Completed",
+  },
   { id: "exams", iconName: "clock", value: "0", label: "Exams Completed" },
 ];
 
@@ -30,9 +35,17 @@ interface AchievementItemProps {
   text: string;
 }
 
-const AchievementItem: React.FC<AchievementItemProps> = ({ iconName, text }) => (
+const AchievementItem: React.FC<AchievementItemProps> = ({
+  iconName,
+  text,
+}) => (
   <View style={styles.itemRow}>
-    <Feather name={iconName} size={20} color={Colors.text} style={styles.icon} />
+    <Feather
+      name={iconName}
+      size={20}
+      color={Colors.text}
+      style={styles.icon}
+    />
     <Text style={styles.itemText}>{text}</Text>
   </View>
 );
@@ -61,21 +74,23 @@ const styles = StyleSheet.create({
     fontSize: 18,
     color: Colors.text,
     marginBottom: 10,
+    fontWeight: "600",
   },
   card: {
     backgroundColor: Colors.cardBg,
-    borderRadius: 12,
-    borderWidth: 0.2,
+    borderRadius: 16,
+    borderWidth: 1,
     borderColor: Colors.border,
-    padding: 12,
+    padding: 16,
   },
   itemRow: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 8, // spacing between rows
+    marginBottom: 10, // spacing between rows
   },
   icon: {
-    marginRight: 10,
+    marginRight: 12,
+    opacity: 0.8,
   },
   itemText: {
     fontFamily: Fonts.regular,

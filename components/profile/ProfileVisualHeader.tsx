@@ -4,11 +4,11 @@ import React, { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Image,
-  Modal, // Import Modal
+  Modal,
   StyleSheet,
   Text,
   TouchableOpacity,
-  View,
+  View
 } from "react-native";
 
 interface Props {
@@ -16,17 +16,19 @@ interface Props {
   isUploading?: boolean;
 }
 
+const Colors = {
+  primary: "#48316D", // Deep Brand Purple
+  white: "#FFFFFF",
+  gold: "#FFD700",
+  textMuted: "rgba(255, 255, 255, 0.7)",
+};
+
 const ProfileVisualHeader = ({ onEditPress, isUploading = false }: Props) => {
   const { user } = useAuth();
-
-  // State for the success popup
   const [showSuccessModal, setShowSuccessModal] = useState(false);
-  
-  // Track previous uploading state
   const wasUploading = useRef(isUploading);
 
   useEffect(() => {
-    // If it WAS uploading and now is NOT, show the success modal
     if (wasUploading.current && !isUploading) {
       setShowSuccessModal(true);
     }
@@ -37,14 +39,14 @@ const ProfileVisualHeader = ({ onEditPress, isUploading = false }: Props) => {
   const firstNameInitial = user?.first_name?.charAt(0) || "U";
   const fullNameDisplay = user?.first_name
     ? `${user.first_name} ${user.last_name || ""}`
-    : "User";
+    : "Student";
   const usernameOrEmailDisplay = user?.username
     ? `@${user.username}`
-    : "@student";
+    : "@future_rpm";
 
   return (
     <View style={styles.container}>
-      {/* --- CUSTOM ALERT MODAL --- */}
+      {/* --- SUCCESS MODAL --- */}
       <Modal
         transparent={true}
         visible={showSuccessModal}
@@ -54,18 +56,22 @@ const ProfileVisualHeader = ({ onEditPress, isUploading = false }: Props) => {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalIconContainer}>
-              <FontAwesome5 name="check-circle" size={40} color="#10B981" />
+              <FontAwesome5
+                name="check-circle"
+                size={48}
+                color={Colors.primary}
+              />
             </View>
-            <Text style={styles.modalTitle}>Upload Complete</Text>
+            <Text style={styles.modalTitle}>Upload Complete!</Text>
             <Text style={styles.modalMessage}>
               Your profile picture has been successfully updated.
             </Text>
-            
-            <TouchableOpacity 
+
+            <TouchableOpacity
               style={styles.modalButton}
               onPress={() => setShowSuccessModal(false)}
             >
-              <Text style={styles.modalButtonText}>OK</Text>
+              <Text style={styles.modalButtonText}>Awesome</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -92,17 +98,15 @@ const ProfileVisualHeader = ({ onEditPress, isUploading = false }: Props) => {
             </View>
           )}
 
-          {/* Loading Overlay */}
           {isUploading && (
             <View style={styles.loadingOverlay}>
-              <ActivityIndicator size="small" color="#333" />
+              <ActivityIndicator size="small" color={Colors.primary} />
             </View>
           )}
 
-          {/* Edit Pencil Badge */}
           {!isUploading && (
             <View style={styles.editIconContainer}>
-              <FontAwesome5 name="pen" size={10} color="#3D365C" />
+              <FontAwesome5 name="pen" size={10} color={Colors.primary} />
             </View>
           )}
         </TouchableOpacity>
@@ -118,6 +122,12 @@ const ProfileVisualHeader = ({ onEditPress, isUploading = false }: Props) => {
 
           {/* Badge */}
           <View style={styles.badgeContainer}>
+            <FontAwesome5
+              name="crown"
+              size={10}
+              color={Colors.gold}
+              style={{ marginRight: 6 }}
+            />
             <Text style={styles.badgeText}>Future RPm</Text>
           </View>
         </View>
@@ -129,50 +139,49 @@ const ProfileVisualHeader = ({ onEditPress, isUploading = false }: Props) => {
 const styles = StyleSheet.create({
   container: {
     width: "100%",
-    marginBottom: 16,
+    marginBottom: 20,
     marginTop: 10,
   },
   card: {
-    backgroundColor: "#3D365C",
-    borderRadius: 16,
+    backgroundColor: Colors.primary,
+    borderRadius: 24,
     padding: 24,
     flexDirection: "row",
     alignItems: "center",
-    shadowColor: "#3D365C",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 5,
+    // Deep purple shadow
+    shadowColor: "#2D1F2C",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
+    elevation: 8,
   },
   // --- Modal Styles ---
   modalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.6)", // Dim background
+    backgroundColor: "rgba(45, 31, 44, 0.6)", // Dark purple tint overlay
     justifyContent: "center",
     alignItems: "center",
   },
   modalContent: {
     width: "80%",
-    maxWidth: 320,
     backgroundColor: "#FFF",
-    borderRadius: 20,
-    padding: 24,
+    borderRadius: 24,
+    padding: 28,
     alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 10,
     elevation: 10,
   },
   modalIconContainer: {
     marginBottom: 16,
+    backgroundColor: "#F3E5F5",
+    padding: 16,
+    borderRadius: 50,
   },
   modalTitle: {
     fontSize: 20,
-    fontWeight: "bold",
-    color: "#333",
+    fontWeight: "700",
+    color: "#2D1F2C",
     marginBottom: 8,
-    textAlign: "center",
+    fontFamily: "LexendDeca-Regular",
   },
   modalMessage: {
     fontSize: 14,
@@ -180,48 +189,51 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginBottom: 24,
     lineHeight: 20,
+    fontFamily: "LexendDeca-Regular",
   },
   modalButton: {
-    backgroundColor: "#3D365C", // Theme color
-    paddingVertical: 12,
+    backgroundColor: Colors.primary,
+    paddingVertical: 14,
     paddingHorizontal: 32,
-    borderRadius: 25,
+    borderRadius: 16,
     width: "100%",
     alignItems: "center",
   },
   modalButtonText: {
     color: "#FFF",
     fontSize: 16,
-    fontWeight: "bold",
+    fontWeight: "600",
+    fontFamily: "LexendDeca-Regular",
   },
   // --- Avatar ---
   avatarWrapper: {
     position: "relative",
-    width: 84,
-    height: 84,
+    width: 80,
+    height: 80,
     marginRight: 20,
   },
   avatarImage: {
-    width: 84,
-    height: 84,
-    borderRadius: 42,
+    width: 80,
+    height: 80,
+    borderRadius: 40,
     borderWidth: 3,
-    borderColor: "rgba(255,255,255,0.15)",
+    borderColor: "rgba(255,255,255,0.2)",
   },
   initialsAvatar: {
-    width: 84,
-    height: 84,
-    borderRadius: 42,
-    backgroundColor: "#FF6B6B", 
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: "#FF8A65", // Warm pastel orange/coral
     justifyContent: "center",
     alignItems: "center",
     borderWidth: 3,
-    borderColor: "rgba(255,255,255,0.15)",
+    borderColor: "rgba(255,255,255,0.2)",
   },
   initialsText: {
     color: "#FFF",
     fontWeight: "bold",
-    fontSize: 34,
+    fontSize: 32,
+    fontFamily: "LexendDeca-Regular",
   },
   editIconContainer: {
     position: "absolute",
@@ -234,7 +246,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     borderWidth: 2,
-    borderColor: "#3D365C",
+    borderColor: Colors.primary,
   },
   loadingOverlay: {
     position: "absolute",
@@ -242,8 +254,8 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    borderRadius: 42,
-    backgroundColor: "rgba(255,255,255,0.5)",
+    borderRadius: 40,
+    backgroundColor: "rgba(255,255,255,0.8)",
     justifyContent: "center",
     alignItems: "center",
   },
@@ -253,34 +265,36 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   displayName: {
-    fontSize: 22,
-    fontWeight: "800",
-    color: "#FFF",
+    fontSize: 20,
+    fontWeight: "700",
+    color: Colors.white,
     marginBottom: 4,
-    letterSpacing: 0.3,
+    fontFamily: "LexendDeca-Regular",
   },
   username: {
     fontSize: 14,
-    color: "rgba(255, 255, 255, 0.6)",
+    color: Colors.textMuted,
     marginBottom: 12,
-    fontWeight: "500",
+    fontFamily: "LexendDeca-Regular",
   },
   // --- Badge ---
   badgeContainer: {
-    backgroundColor: "rgba(0, 0, 0, 0.3)",
-    borderRadius: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(0, 0, 0, 0.25)",
+    borderRadius: 12,
     paddingVertical: 6,
     paddingHorizontal: 12,
     alignSelf: "flex-start",
     borderWidth: 1,
-    borderColor: "rgba(255,215,0,0.1)",
+    borderColor: "rgba(255, 215, 0, 0.3)",
   },
   badgeText: {
-    fontSize: 11,
-    fontWeight: "800",
-    color: "#FFD700",
-    letterSpacing: 0.8,
-    textTransform: "uppercase",
+    fontSize: 12,
+    fontWeight: "700",
+    color: Colors.gold,
+    letterSpacing: 0.5,
+    fontFamily: "LexendDeca-Regular",
   },
 });
 

@@ -1,4 +1,4 @@
-import { Ionicons } from "@expo/vector-icons";
+import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
@@ -13,7 +13,7 @@ export default function ProfileMenu({ onLogout }: Props) {
   // Reusable Row Component
   const MenuRow = ({
     label,
-    icon,
+    iconName,
     color,
     bgColor,
     route,
@@ -29,9 +29,9 @@ export default function ProfileMenu({ onLogout }: Props) {
         onPress={handlePress}
         activeOpacity={0.7}
       >
-        {/* Icon Bubble */}
+        {/* Icon Bubble - Now a Squircle */}
         <View style={[styles.iconBox, { backgroundColor: bgColor }]}>
-          <Ionicons name={icon} size={20} color={color} />
+          <MaterialCommunityIcons name={iconName} size={24} color={color} />
         </View>
 
         {/* Text Content */}
@@ -43,10 +43,10 @@ export default function ProfileMenu({ onLogout }: Props) {
           </Text>
         </View>
 
-        {/* Chevron (Hidden for Logout/Destructive items usually, or keep consistent) */}
-        {!isDestructive ? (
-          <Ionicons name="chevron-forward" size={20} color="#CBD5E1" />
-        ) : null}
+        {/* Chevron - Only show if NOT destructive (hidden for Log Out) */}
+        {!isDestructive && (
+          <Ionicons name="chevron-forward" size={20} color="#E2E8F0" />
+        )}
       </TouchableOpacity>
     );
   };
@@ -56,37 +56,36 @@ export default function ProfileMenu({ onLogout }: Props) {
       <View style={styles.menuWrapper}>
         <MenuRow
           label="My Account"
-          icon="person"
-          color="#3B82F6" // Blue
-          bgColor="#EFF6FF" // Pastel Blue
+          iconName="account-circle-outline" // Enhanced User Icon
+          color="#3B82F6" // Blue Text
+          bgColor="#EFF6FF" // Pastel Blue BG
           route="/profile/my-account"
         />
 
         <MenuRow
           label="Offline Materials"
-          icon="cloud-download"
-          color="#10B981" // Green
-          bgColor="#ECFDF5" // Pastel Green
+          iconName="book-arrow-down-outline" // Specific "Study Material" Icon
+          color="#10B981" // Green Text
+          bgColor="#ECFDF5" // Pastel Green BG
           route="/profile/offline-materials"
         />
 
         <MenuRow
           label="Help & Support"
-          icon="help-buoy"
-          color="#F59E0B" // Orange
-          bgColor="#FFFBEB" // Pastel Orange
+          iconName="face-agent" // Classic Support Icon
+          color="#F59E0B" // Orange Text
+          bgColor="#FFFBEB" // Pastel Cream/Orange BG
           route="/profile/help-support"
         />
 
-        {/* Logout is now part of the list */}
         <MenuRow
           label="Log Out"
-          icon="log-out-outline"
-          color="#a10d0dff" // Red Icon
+          iconName="logout-variant" // Clear Exit Icon
+          color="#EF4444" // Red Text
           bgColor="#FEF2F2" // Pastel Red BG
           onPress={onLogout}
           isDestructive
-          isLast // Removes the border bottom
+          isLast
         />
       </View>
     </View>
@@ -98,39 +97,35 @@ const styles = StyleSheet.create({
     width: "100%",
     paddingBottom: 40,
   },
-  // The single container for all items
   menuWrapper: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-    overflow: "hidden", // Ensures children don't bleed out of rounded corners
-
-    // Soft Shadow
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
+    borderRadius: 24, // Smoother corners
+    overflow: "hidden",
+    // Soft, elevated shadow
+    shadowColor: "#48316D",
+    shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
-
+    shadowRadius: 16,
+    elevation: 4,
     borderWidth: 1,
-    borderColor: "#F0F0F0",
+    borderColor: "rgba(0,0,0,0.02)",
   },
-  // Row Styles
   row: {
     flexDirection: "row",
     alignItems: "center",
-    padding: 16,
+    paddingVertical: 16,
+    paddingHorizontal: 20,
     backgroundColor: "#FFFFFF",
-    borderBottomWidth: 1,
-    borderBottomColor: "#F3F4F6", // Light divider
+    borderBottomWidth: 2,
+    borderBottomColor: "#F8FAFC",
   },
   lastRow: {
     borderBottomWidth: 0,
   },
-  // Icon Styles
   iconBox: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 48, // Slightly larger
+    height: 48,
+    borderRadius: 16, // Squircle shape (Rounded Square)
     justifyContent: "center",
     alignItems: "center",
     marginRight: 16,
@@ -139,12 +134,13 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   label: {
-    fontSize: 15,
+    fontSize: 16, // Slightly larger text
     fontWeight: "500",
-    color: "#333",
-    fontFamily: "LexendDeca-Medium",
+    color: "#1E293B", // Deep slate text
+    fontFamily: "LexendDeca-Regular",
+    letterSpacing: -0.2,
   },
   destructiveLabel: {
-    color: "#c42121ff", // Red text for Logout
+    color: "#EF4444",
   },
 });

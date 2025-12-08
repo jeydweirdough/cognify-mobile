@@ -8,8 +8,8 @@ interface LogoutButtonProps {
 
 const LogoutButton = ({ onPress }: LogoutButtonProps) => (
   <Pressable style={styles.logoutButton} onPress={onPress}>
-    <FontAwesome name="sign-out" size={16} color="#FF5C5C" />
-    <Text style={styles.logoutButtonText}>Logout</Text>
+    <FontAwesome name="sign-out" size={16} color="#D32F2F" />
+    <Text style={styles.logoutButtonText}>Log Out</Text>
   </Pressable>
 );
 
@@ -18,17 +18,21 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#FFF0F0",
-    borderRadius: 12,
-    paddingVertical: 14,
-    gap: 8,
-    borderWidth: 1,
-    borderColor: "#FF5C5C",
+    backgroundColor: "#FFEBEE", // Pastel Red
+    borderRadius: 16,
+    paddingVertical: 16,
+    gap: 10,
+    // Removed border for a cleaner look, added shadow
+    shadowColor: "#D32F2F",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
   },
   logoutButtonText: {
     fontSize: 15,
     fontWeight: "600",
-    color: "#FF5C5C",
+    color: "#D32F2F",
+    fontFamily: "LexendDeca-Regular",
   },
 });
 
