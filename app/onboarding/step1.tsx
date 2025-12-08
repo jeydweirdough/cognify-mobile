@@ -68,11 +68,12 @@ export default function Step1() {
                 ]}
                 onPress={() => setSelected(option.id)}
               >
-                <Text style={styles.optionIcon}>{option.icon}</Text>
-                <Text style={[
-                  styles.optionText,
-                  { fontWeight: isSelected ? '700' : '500' }
-                ]}>
+                <Text
+                  style={[
+                    styles.optionText,
+                    { fontWeight: isSelected ? '700' : '500', textAlign: 'center', width: '100%' }
+                  ]}
+                >
                   {option.label}
                 </Text>
               </TouchableOpacity>
@@ -155,6 +156,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     borderRadius: 30,
     borderWidth: 1,
+    justifyContent: 'center',
   },
   optionSpacing: {
     marginTop: 16,
@@ -166,10 +168,6 @@ const styles = StyleSheet.create({
   optionSelected: {
     backgroundColor: Colors.primaryLight,
     borderColor: Colors.primary,
-  },
-  optionIcon: {
-    fontSize: 20,
-    marginRight: 12,
   },
   optionText: {
     fontSize: 16,

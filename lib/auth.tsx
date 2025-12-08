@@ -136,10 +136,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const { data } = await api.put('/profiles/me', updates);
       setUser((prev) => (prev ? { ...prev, ...updates } : null));
-      Alert.alert('Success', 'Profile updated successfully');
     } catch (e: any) {
       console.error('Update failed:', e.response?.data || e.message);
-      Alert.alert('Update Failed', e.response?.data?.detail || 'Could not update profile');
       throw e;
     }
   };
