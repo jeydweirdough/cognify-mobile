@@ -24,7 +24,7 @@ export default function ReadyAssessmentCard() {
       <Text style={styles.assessmentTitle}>Ready to ace your exam?</Text>
       <Text style={styles.assessmentSubtitle}>Find out your strengths and areas to work on first.
 </Text>
-      <TouchableOpacity style={styles.assessmentButton} activeOpacity={0.8} onPress={() => router.push("/assessments")}>
+      <TouchableOpacity style={styles.assessmentButton} activeOpacity={0.8} onPress={() => router.push('/(app)/assessments')}>
         <Text style={styles.assessmentButtonText}>Start Diagnostic Test</Text>
       </TouchableOpacity>
     </View>

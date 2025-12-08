@@ -1,3 +1,4 @@
+import { PRIMARY_COLOR } from "@/constants/cognify-theme";
 import { hasTakenDiagnostic } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { storage } from "@/lib/storage";
@@ -11,40 +12,45 @@ export default function AssessmentTest() {
   const { user, initialized, token } = useAuth() as any;
 
   useEffect(() => {
-    if (!initialized) return;
 
-    const checkTaken = async () => {
+    const checkTakenFast = async () => {
+      const key = user?.id
+        ? `diagnostic_assessment_results:${user.id}`
+        : "diagnostic_assessment_results";
+
       try {
-        if (token) {
-          const flag = await hasTakenDiagnostic();
-          if (flag) {
-            setHasTaken(true);
-            return;
-          }
-        }
-        const key = user?.id
-          ? `diagnostic_assessment_results:${user.id}`
-          : "diagnostic_assessment_results";
         const raw = await storage.getItem(key);
         setHasTaken(!!raw);
       } catch {
-        const key = user?.id
-          ? `diagnostic_assessment_results:${user.id}`
-          : "diagnostic_assessment_results";
-        const raw = await storage.getItem(key);
-        setHasTaken(!!raw);
+        setHasTaken(false);
+      }
+
+      if (token) {
+        try {
+          const flag = await Promise.race([
+            hasTakenDiagnostic(),
+            new Promise<boolean>((resolve) => setTimeout(() => resolve(false), 1500)),
+          ]);
+          if (flag) {
+            setHasTaken(true);
+            const existing = await storage.getItem(key);
+            if (!existing) {
+              await storage.setItem(key, JSON.stringify({ taken: true, timestamp: new Date().toISOString() }));
+            }
+          }
+        } catch {}
       }
     };
 
-    checkTaken();
+    checkTakenFast();
   }, [initialized, user?.id, token]);
 
   // Render loader while we don't know yet
-  if (!initialized || hasTaken === null) {
+  if (hasTaken === null) {
     return (
       <View style={styles.loaderSection}>
         <View style={{ alignItems: "center", paddingVertical: 6 }}>
-          <ActivityIndicator color="#FFF" />
+          <ActivityIndicator color={PRIMARY_COLOR} />
         </View>
       </View>
     );
