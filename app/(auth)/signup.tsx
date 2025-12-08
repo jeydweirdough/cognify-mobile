@@ -4,6 +4,8 @@ import { useRef, useState } from 'react';
 import {
     ActivityIndicator,
     Alert,
+    KeyboardAvoidingView, // <--- Import this
+    Platform, // <--- Import this
     Pressable,
     SafeAreaView,
     ScrollView,
@@ -21,7 +23,7 @@ const THEME = {
     borderColor: '#A9A9A9',
     buttonPurple: '#3E206D',
     white: '#FFFFFF',
-    errorRed: '#FF3B3B', // Changed slightly for better contrast
+    errorRed: '#FF3B3B',
 };
 
 export default function SignUpScreen() {
@@ -30,7 +32,6 @@ export default function SignUpScreen() {
     const [confirmPassword, setConfirmPassword] = useState('');
     const [firstName, setFirstName] = useState('');
     const [lastName, setLastName] = useState('');
-    // --- NEW STATE FOR USERNAME ---
     const [username, setUsername] = useState(''); 
 
     const [showPassword, setShowPassword] = useState(false);
@@ -39,11 +40,9 @@ export default function SignUpScreen() {
 
     const { signup } = useAuth();
 
-    // State to track specific error messages
     const [errors, setErrors] = useState({
         firstName: '',
         lastName: '',
-        // --- NEW ERROR FIELD ---
         username: '',
         email: '',
         password: '',
@@ -51,338 +50,237 @@ export default function SignUpScreen() {
     });
 
     const lastNameRef = useRef<TextInput>(null);
-    // --- NEW REF ---
     const usernameRef = useRef<TextInput>(null);
     const emailRef = useRef<TextInput>(null);
     const passwordRef = useRef<TextInput>(null);
     const confirmPasswordRef = useRef<TextInput>(null);
 
     const handleSignUp = async () => {
-        // 1. Reset Errors
+        // ... (Logic remains exactly the same as your code) ...
         setErrors({
             firstName: '',
             lastName: '',
-            username: '', // Reset username error
+            username: '',
             email: '',
             password: '',
             confirmPassword: ''
         });
 
-        // 2. Client-Side Validation
         let isValid = true;
         const newErrors = {
             firstName: '',
             lastName: '',
-            username: '', // Initialize username error
+            username: '',
             email: '',
             password: '',
             confirmPassword: ''
         };
 
-        // -- Check Empty Fields --
-        if (!firstName.trim()) {
-            newErrors.firstName = 'First name is required';
-            isValid = false;
-        }
-        if (!lastName.trim()) {
-            newErrors.lastName = 'Last name is required';
-            isValid = false;
-        }
-        // --- NEW USERNAME VALIDATION ---
-        if (!username.trim()) {
-            newErrors.username = 'Username is required';
-            isValid = false;
-        } else if (username.trim().length < 4) {
-             newErrors.username = 'Username must be at least 4 characters long.';
-             isValid = false;
-        }
-        // --- END NEW USERNAME VALIDATION ---
+        if (!firstName.trim()) { newErrors.firstName = 'First name is required'; isValid = false; }
+        if (!lastName.trim()) { newErrors.lastName = 'Last name is required'; isValid = false; }
+        if (!username.trim()) { newErrors.username = 'Username is required'; isValid = false; } 
+        else if (username.trim().length < 4) { newErrors.username = 'Username must be at least 4 characters long.'; isValid = false; }
 
-        if (!email.trim()) {
-            newErrors.email = 'Email is required';
-            isValid = false;
-        } else if (!email.trim().toLowerCase().endsWith('@cvsu.edu.ph')) {
-            newErrors.email = 'Email must be a valid CVSU email (@cvsu.edu.ph)';
-            isValid = false;
-        }
+        if (!email.trim()) { newErrors.email = 'Email is required'; isValid = false; } 
+        else if (!email.trim().toLowerCase().endsWith('@cvsu.edu.ph')) { newErrors.email = 'Email must be a valid CVSU email (@cvsu.edu.ph)'; isValid = false; }
 
-        // -- Password Validation --
-        if (!password) {
-            newErrors.password = 'Password is required';
-            isValid = false;
-        } else if (password.length < 8) {
-            newErrors.password = 'Password must be at least 8 characters long.';
-            isValid = false;
-        }
+        if (!password) { newErrors.password = 'Password is required'; isValid = false; } 
+        else if (password.length < 8) { newErrors.password = 'Password must be at least 8 characters long.'; isValid = false; }
 
-        if (!confirmPassword) {
-            newErrors.confirmPassword = 'Please confirm your password';
-            isValid = false;
-        }
+        if (!confirmPassword) { newErrors.confirmPassword = 'Please confirm your password'; isValid = false; }
+        if (password && confirmPassword && password !== confirmPassword) { newErrors.confirmPassword = 'Passwords do not match'; isValid = false; }
 
-        // -- Password Mismatch Check --
-        if (password && confirmPassword && password !== confirmPassword) {
-            newErrors.confirmPassword = 'Passwords do not match';
-            isValid = false;
-        }
+        if (!isValid) { setErrors(newErrors); return; }
 
-        if (!isValid) {
-            setErrors(newErrors);
-            return;
-        }
-
-        // 3. Submit to Backend
         setIsLoading(true);
         try {
-            // --- UPDATED SIGNUP CALL WITH USERNAME ---
             const normalizedEmail = email.trim().toLowerCase();
             await signup(normalizedEmail, password, firstName, lastName, username);
         } catch (e: any) {
             console.log("Signup Error:", e.response?.status, e.response?.data);
-
             const status = e.response?.status;
             const data = e.response?.data;
             const detail = data?.detail;
 
-            // --- Handle Backend Validation Errors (422) ---
             if (status === 422 && Array.isArray(detail)) {
                 detail.forEach((err: any) => {
                     const fieldName = err.loc?.[1];
-
-                    if (fieldName === 'email') {
-                        setErrors(prev => ({ ...prev, email: 'Invalid email format' }));
-                    }
-                    else if (fieldName === 'password') {
-                        // If backend complains about password complexity
-                        setErrors(prev => ({ ...prev, password: 'Password must be at least 8 characters & contain 1 uppercase letter.' }));
-                    }
-                    else if (fieldName === 'username') {
-                         setErrors(prev => ({ ...prev, username: 'Invalid username format or too short.' }));
-                    }
-                    else if (fieldName === 'first_name') {
-                        setErrors(prev => ({ ...prev, firstName: 'Invalid first name' }));
-                    }
-                    else if (fieldName === 'last_name') {
-                        setErrors(prev => ({ ...prev, lastName: 'Invalid last name' }));
-                    }
+                    if (fieldName === 'email') setErrors(prev => ({ ...prev, email: 'Invalid email format' }));
+                    else if (fieldName === 'password') setErrors(prev => ({ ...prev, password: 'Password must be at least 8 characters & contain 1 uppercase letter.' }));
+                    else if (fieldName === 'username') setErrors(prev => ({ ...prev, username: 'Invalid username format or too short.' }));
+                    else if (fieldName === 'first_name') setErrors(prev => ({ ...prev, firstName: 'Invalid first name' }));
+                    else if (fieldName === 'last_name') setErrors(prev => ({ ...prev, lastName: 'Invalid last name' }));
                 });
             }
-            // --- Handle Whitelist/Authorization (403) ---
             else if (status === 403) {
-                if (typeof detail === 'string') {
-                    setErrors(prev => ({ ...prev, email: detail }));
-                } else {
-                    Alert.alert('Signup Failed', 'This email is not authorized for registration.');
-                }
+                if (typeof detail === 'string') setErrors(prev => ({ ...prev, email: detail }));
+                else Alert.alert('Signup Failed', 'This email is not authorized for registration.');
             }
-            // --- Handle Duplicate Email/Username (400/409) ---
             else if (status === 400 || status === 409) {
                 if (typeof detail === 'string') {
-                    if (detail.toLowerCase().includes('email') && detail.toLowerCase().includes('exist')) {
-                        setErrors(prev => ({ ...prev, email: 'Email is already registered' }));
-                    } else if (detail.toLowerCase().includes('username') && detail.toLowerCase().includes('exist')) {
-                         setErrors(prev => ({ ...prev, username: 'Username is already taken' }));
-                    }
-                     else {
-                         Alert.alert('Signup Failed', detail || 'Could not create account.');
-                    }
-                }
-                 else {
-                    // Fallback
-                    Alert.alert('Signup Failed', 'A network or unexpected error occurred.');
-                }
+                    if (detail.toLowerCase().includes('email') && detail.toLowerCase().includes('exist')) setErrors(prev => ({ ...prev, email: 'Email is already registered' }));
+                    else if (detail.toLowerCase().includes('username') && detail.toLowerCase().includes('exist')) setErrors(prev => ({ ...prev, username: 'Username is already taken' }));
+                    else Alert.alert('Signup Failed', detail || 'Could not create account.');
+                } else { Alert.alert('Signup Failed', 'A network or unexpected error occurred.'); }
             }
-            else {
-                // Fallback
-                Alert.alert('Signup Failed', detail || 'An unexpected error occurred.');
-            }
-
-        } finally {
-            setIsLoading(false);
-        }
+            else { Alert.alert('Signup Failed', detail || 'An unexpected error occurred.'); }
+        } finally { setIsLoading(false); }
     };
 
     const clearError = (field: keyof typeof errors) => {
-        if (errors[field]) {
-            setErrors(prev => ({ ...prev, [field]: '' }));
-        }
+        if (errors[field]) setErrors(prev => ({ ...prev, [field]: '' }));
     };
 
     return (
         <SafeAreaView style={styles.safeArea}>
-            <ScrollView contentContainerStyle={styles.scrollContainer}>
-                <View style={styles.headerContainer}>
-                    <Text style={styles.title}>Create your Account</Text>
-                    <Text style={styles.subtitle}>Sign up to get started</Text>
-                </View>
-
-                <View style={styles.formContainer}>
-
-                    {/* First Name */}
-                    <View style={styles.inputGroup}>
-                        <Text style={styles.label}>First Name:</Text>
-                        <TextInput
-                            style={[styles.input, !!errors.firstName && styles.inputError]}
-                            placeholder="First Name"
-                            value={firstName}
-                            onChangeText={(text) => {
-                                setFirstName(text);
-                                clearError('firstName');
-                            }}
-                            autoCapitalize="words"
-                            placeholderTextColor="#999"
-                            returnKeyType="next"
-                            onSubmitEditing={() => lastNameRef.current?.focus()}
-                            blurOnSubmit={false}
-                        />
-                        {!!errors.firstName && <Text style={styles.errorText}>{errors.firstName}</Text>}
+            {/* Added KeyboardAvoidingView wrapper */}
+            <KeyboardAvoidingView 
+                style={{ flex: 1 }} 
+                behavior={Platform.OS === "ios" ? "padding" : "height"}
+            >
+                <ScrollView 
+                    contentContainerStyle={styles.scrollContainer}
+                    keyboardShouldPersistTaps="handled" // Allows pressing buttons while keyboard is open
+                    showsVerticalScrollIndicator={false}
+                >
+                    <View style={styles.headerContainer}>
+                        <Text style={styles.title}>Create your Account</Text>
+                        <Text style={styles.subtitle}>Sign up to get started</Text>
                     </View>
 
-                    {/* Last Name */}
-                    <View style={styles.inputGroup}>
-                        <Text style={styles.label}>Last Name:</Text>
-                        <TextInput
-                            ref={lastNameRef}
-                            style={[styles.input, !!errors.lastName && styles.inputError]}
-                            placeholder="Last Name"
-                            value={lastName}
-                            onChangeText={(text) => {
-                                setLastName(text);
-                                clearError('lastName');
-                            }}
-                            autoCapitalize="words"
-                            placeholderTextColor="#999"
-                            returnKeyType="next"
-                            onSubmitEditing={() => usernameRef.current?.focus()} // Chain to Username
-                            blurOnSubmit={false}
-                        />
-                        {!!errors.lastName && <Text style={styles.errorText}>{errors.lastName}</Text>}
-                    </View>
-                    
-                    {/* --- NEW USERNAME INPUT --- */}
-                    <View style={styles.inputGroup}>
-                        <Text style={styles.label}>Username:</Text>
-                        <TextInput
-                            ref={usernameRef}
-                            style={[styles.input, !!errors.username && styles.inputError]}
-                            placeholder="e.g., psych_student_cvsu"
-                            value={username}
-                            onChangeText={(text) => {
-                                setUsername(text.toLowerCase().replace(/\s/g, '')); // Enforce lowercase and no spaces
-                                clearError('username');
-                            }}
-                            autoCapitalize="none"
-                            placeholderTextColor="#999"
-                            returnKeyType="next"
-                            onSubmitEditing={() => emailRef.current?.focus()} // Chain to Email
-                            blurOnSubmit={false}
-                        />
-                        {!!errors.username && <Text style={styles.errorText}>{errors.username}</Text>}
-                    </View>
-                    {/* --- END NEW USERNAME INPUT --- */}
-
-                    {/* Email Address */}
-                    <View style={styles.inputGroup}>
-                        <Text style={styles.label}>Email Address:</Text>
-                        <TextInput
-                            ref={emailRef}
-                            style={[styles.input, !!errors.email && styles.inputError]}
-                            placeholder="student_psych@cvsu.edu.ph"
-                            value={email}
-                            onChangeText={(text) => {
-                                setEmail(text);
-                                clearError('email');
-                            }}
-                            autoCapitalize="none"
-                            keyboardType="email-address"
-                            placeholderTextColor="#999"
-                            returnKeyType="next"
-                            onSubmitEditing={() => passwordRef.current?.focus()}
-                            blurOnSubmit={false}
-                        />
-                        {!!errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
-                    </View>
-
-                    {/* Set Password */}
-                    <View style={styles.inputGroup}>
-                        <Text style={styles.label}>Set password</Text>
-                        <View style={[styles.passwordContainer, !!errors.password && styles.inputError]}>
+                    <View style={styles.formContainer}>
+                        {/* First Name */}
+                        <View style={styles.inputGroup}>
+                            <Text style={styles.label}>First Name:</Text>
                             <TextInput
-                                ref={passwordRef}
-                                style={styles.passwordInput}
-                                placeholder="***************"
-                                value={password}
-                                onChangeText={(text) => {
-                                    setPassword(text);
-                                    clearError('password');
-                                }}
-                                secureTextEntry={!showPassword}
+                                style={[styles.input, !!errors.firstName && styles.inputError]}
+                                placeholder="First Name"
+                                value={firstName}
+                                onChangeText={(text) => { setFirstName(text); clearError('firstName'); }}
+                                autoCapitalize="words"
                                 placeholderTextColor="#999"
                                 returnKeyType="next"
-                                onSubmitEditing={() => confirmPasswordRef.current?.focus()}
+                                onSubmitEditing={() => lastNameRef.current?.focus()}
                                 blurOnSubmit={false}
                             />
-                            <TouchableOpacity
-                                onPress={() => setShowPassword(!showPassword)}
-                                style={styles.eyeIcon}
-                            >
-                                <Feather name={showPassword ? "eye" : "eye-off"} size={20} color="#666" />
-                            </TouchableOpacity>
+                            {!!errors.firstName && <Text style={styles.errorText}>{errors.firstName}</Text>}
                         </View>
-                        {/* Display Password Error here */}
-                        {!!errors.password && <Text style={styles.errorText}>{errors.password}</Text>}
-                    </View>
 
-                    {/* Confirm Password */}
-                    <View style={styles.inputGroup}>
-                        <Text style={styles.label}>Confirm password</Text>
-                        <View style={[styles.passwordContainer, !!errors.confirmPassword && styles.inputError]}>
+                        {/* Last Name */}
+                        <View style={styles.inputGroup}>
+                            <Text style={styles.label}>Last Name:</Text>
                             <TextInput
-                                ref={confirmPasswordRef}
-                                style={styles.passwordInput}
-                                placeholder="***************"
-                                value={confirmPassword}
-                                onChangeText={(text) => {
-                                    setConfirmPassword(text);
-                                    clearError('confirmPassword');
-                                }}
-                                secureTextEntry={!showConfirmPassword}
+                                ref={lastNameRef}
+                                style={[styles.input, !!errors.lastName && styles.inputError]}
+                                placeholder="Last Name"
+                                value={lastName}
+                                onChangeText={(text) => { setLastName(text); clearError('lastName'); }}
+                                autoCapitalize="words"
                                 placeholderTextColor="#999"
-                                returnKeyType="go"
-                                onSubmitEditing={handleSignUp}
+                                returnKeyType="next"
+                                onSubmitEditing={() => usernameRef.current?.focus()}
+                                blurOnSubmit={false}
                             />
-                            <TouchableOpacity
-                                onPress={() => setShowConfirmPassword(!showConfirmPassword)}
-                                style={styles.eyeIcon}
-                            >
-                                <Feather name={showConfirmPassword ? "eye" : "eye-off"} size={20} color="#666" />
-                            </TouchableOpacity>
+                            {!!errors.lastName && <Text style={styles.errorText}>{errors.lastName}</Text>}
                         </View>
-                        {!!errors.confirmPassword && <Text style={styles.errorText}>{errors.confirmPassword}</Text>}
+                        
+                        {/* Username */}
+                        <View style={styles.inputGroup}>
+                            <Text style={styles.label}>Username:</Text>
+                            <TextInput
+                                ref={usernameRef}
+                                style={[styles.input, !!errors.username && styles.inputError]}
+                                placeholder="e.g., psych_student_cvsu"
+                                value={username}
+                                onChangeText={(text) => { setUsername(text.toLowerCase().replace(/\s/g, '')); clearError('username'); }}
+                                autoCapitalize="none"
+                                placeholderTextColor="#999"
+                                returnKeyType="next"
+                                onSubmitEditing={() => emailRef.current?.focus()}
+                                blurOnSubmit={false}
+                            />
+                            {!!errors.username && <Text style={styles.errorText}>{errors.username}</Text>}
+                        </View>
+
+                        {/* Email Address */}
+                        <View style={styles.inputGroup}>
+                            <Text style={styles.label}>Email Address:</Text>
+                            <TextInput
+                                ref={emailRef}
+                                style={[styles.input, !!errors.email && styles.inputError]}
+                                placeholder="student_psych@cvsu.edu.ph"
+                                value={email}
+                                onChangeText={(text) => { setEmail(text); clearError('email'); }}
+                                autoCapitalize="none"
+                                keyboardType="email-address"
+                                placeholderTextColor="#999"
+                                returnKeyType="next"
+                                onSubmitEditing={() => passwordRef.current?.focus()}
+                                blurOnSubmit={false}
+                            />
+                            {!!errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
+                        </View>
+
+                        {/* Set Password */}
+                        <View style={styles.inputGroup}>
+                            <Text style={styles.label}>Set password</Text>
+                            <View style={[styles.passwordContainer, !!errors.password && styles.inputError]}>
+                                <TextInput
+                                    ref={passwordRef}
+                                    style={styles.passwordInput}
+                                    placeholder="***************"
+                                    value={password}
+                                    onChangeText={(text) => { setPassword(text); clearError('password'); }}
+                                    secureTextEntry={!showPassword}
+                                    placeholderTextColor="#999"
+                                    returnKeyType="next"
+                                    onSubmitEditing={() => confirmPasswordRef.current?.focus()}
+                                    blurOnSubmit={false}
+                                />
+                                <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeIcon}>
+                                    <Feather name={showPassword ? "eye" : "eye-off"} size={20} color="#666" />
+                                </TouchableOpacity>
+                            </View>
+                            {!!errors.password && <Text style={styles.errorText}>{errors.password}</Text>}
+                        </View>
+
+                        {/* Confirm Password */}
+                        <View style={styles.inputGroup}>
+                            <Text style={styles.label}>Confirm password</Text>
+                            <View style={[styles.passwordContainer, !!errors.confirmPassword && styles.inputError]}>
+                                <TextInput
+                                    ref={confirmPasswordRef}
+                                    style={styles.passwordInput}
+                                    placeholder="***************"
+                                    value={confirmPassword}
+                                    onChangeText={(text) => { setConfirmPassword(text); clearError('confirmPassword'); }}
+                                    secureTextEntry={!showConfirmPassword}
+                                    placeholderTextColor="#999"
+                                    returnKeyType="go"
+                                    onSubmitEditing={handleSignUp}
+                                />
+                                <TouchableOpacity onPress={() => setShowConfirmPassword(!showConfirmPassword)} style={styles.eyeIcon}>
+                                    <Feather name={showConfirmPassword ? "eye" : "eye-off"} size={20} color="#666" />
+                                </TouchableOpacity>
+                            </View>
+                            {!!errors.confirmPassword && <Text style={styles.errorText}>{errors.confirmPassword}</Text>}
+                        </View>
+
+                        <Pressable style={[styles.button, isLoading && styles.buttonDisabled]} onPress={handleSignUp} disabled={isLoading}>
+                            {isLoading ? <ActivityIndicator size="small" color={THEME.white} /> : <Text style={styles.buttonText}>Create Account</Text>}
+                        </Pressable>
+
+                        <View style={styles.footer}>
+                            <Text style={styles.footerText}>Already have an account? </Text>
+                            <Link href="/(auth)/login" asChild>
+                                <Pressable disabled={isLoading}>
+                                    <Text style={styles.loginLink}>Log in.</Text>
+                                </Pressable>
+                            </Link>
+                        </View>
                     </View>
-
-                    <Pressable
-                        style={[styles.button, isLoading && styles.buttonDisabled]}
-                        onPress={handleSignUp}
-                        disabled={isLoading}>
-                        {isLoading ? (
-                            <ActivityIndicator size="small" color={THEME.white} />
-                        ) : (
-                            <Text style={styles.buttonText}>Create Account</Text>
-                        )}
-                    </Pressable>
-
-                    <View style={styles.footer}>
-                        <Text style={styles.footerText}>Already have an account? </Text>
-                        <Link href="/(auth)/login" asChild>
-                            <Pressable disabled={isLoading}>
-                                <Text style={styles.loginLink}>Log in.</Text>
-                            </Pressable>
-                        </Link>
-                    </View>
-
-                </View>
-            </ScrollView>
+                </ScrollView>
+            </KeyboardAvoidingView>
         </SafeAreaView>
     );
 }
@@ -395,7 +293,9 @@ const styles = StyleSheet.create({
     scrollContainer: {
         flexGrow: 1,
         padding: 24,
-        justifyContent: 'center',
+        // Remove 'justifyContent: center' here if content is long, 
+        // or keep it if you want short forms centered
+        justifyContent: 'center', 
         backgroundColor: THEME.white,
     },
     headerContainer: {
@@ -505,14 +405,3 @@ const styles = StyleSheet.create({
         textDecorationLine: 'underline',
     },
 });
-
-
-// The Python class snippet provided in the original request is not part of the React Native code
-// but is likely a schema definition. It should remain separate from this frontend file.
-// class UserProfileBase(SignUpSchema, VerificationSchema):
-//     profile_image: Optional[str] = None
-//     middle_name: Optional[str] = None
-//     username: Optional[str] = None
-//     student_info: Optional[StudentSchema] = None
-//     is_registered: bool = False
-//     profile_picture: Optional[str] = None

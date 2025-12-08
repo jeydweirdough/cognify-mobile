@@ -1,11 +1,14 @@
 import { Feather } from '@expo/vector-icons';
-import { Link, useRouter } from 'expo-router'; // <--- 1. Import useRouter
+import { Link, useRouter } from 'expo-router';
 import { useRef, useState } from 'react';
 import {
     ActivityIndicator,
     Alert,
+    KeyboardAvoidingView, // <--- Import this
+    Platform,             // <--- Import this
     Pressable,
     SafeAreaView,
+    ScrollView,           // <--- Import this
     StyleSheet,
     Text,
     TextInput,
@@ -24,7 +27,7 @@ const THEME = {
 };
 
 export default function LoginScreen() {
-  const router = useRouter(); // <--- 2. Initialize Router
+  const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -36,26 +39,15 @@ export default function LoginScreen() {
   const passwordInputRef = useRef<TextInput>(null);
 
   const handleLogin = async () => {
-    // 1. Reset Errors
     setErrorMsg({ email: '', password: '' });
 
-    // 2. Client-side Validation
     let isValid = true;
     const newErrors = { email: '', password: '' };
 
-    if (!email) {
-      newErrors.email = 'Email is required';
-      isValid = false;
-    }
-    if (!password) {
-      newErrors.password = 'Password is required';
-      isValid = false;
-    }
+    if (!email) { newErrors.email = 'Email is required'; isValid = false; }
+    if (!password) { newErrors.password = 'Password is required'; isValid = false; }
 
-    if (!isValid) {
-      setErrorMsg(newErrors);
-      return;
-    }
+    if (!isValid) { setErrorMsg(newErrors); return; }
 
     setIsLoading(true);
     try {
@@ -67,114 +59,116 @@ export default function LoginScreen() {
       const data = e.response?.data;
       const detail = data?.detail;
 
-      // Handle Errors (Same logic as before)
       if (status === 422 && Array.isArray(detail)) {
         let hasMappedError = false;
         detail.forEach((err: any) => {
           const fieldName = err.loc?.[1];
-          if (fieldName === 'email') {
-            setErrorMsg(prev => ({ ...prev, email: 'Invalid email format' }));
-            hasMappedError = true;
-          }
-          if (fieldName === 'password') {
-            setErrorMsg(prev => ({ ...prev, password: 'Invalid password' }));
-            hasMappedError = true;
-          }
+          if (fieldName === 'email') { setErrorMsg(prev => ({ ...prev, email: 'Invalid email format' })); hasMappedError = true; }
+          if (fieldName === 'password') { setErrorMsg(prev => ({ ...prev, password: 'Invalid password' })); hasMappedError = true; }
         });
         if (!hasMappedError) Alert.alert('Login Failed', 'Please check your inputs.');
         return;
       }
-      if (status === 401 || status === 400) {
-        setErrorMsg(prev => ({ ...prev, password: 'Invalid password' }));
-      }
-      else if (status === 404) {
-        setErrorMsg(prev => ({ ...prev, email: 'Account not found' }));
-      }
+      if (status === 401 || status === 400) setErrorMsg(prev => ({ ...prev, password: 'Invalid password' }));
+      else if (status === 404) setErrorMsg(prev => ({ ...prev, email: 'Account not found' }));
       else {
         const fallbackMsg = typeof detail === 'string' ? detail : e.message;
         Alert.alert('Login Failed', fallbackMsg || 'An unexpected error occurred.');
       }
-    } finally {
-      setIsLoading(false);
-    }
+    } finally { setIsLoading(false); }
   };
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <View style={styles.container}>
-        <View style={styles.headerContainer}>
-          <Text style={styles.title}>Welcome Back</Text>
-          <Text style={styles.subtitle}>Log in with your account.</Text>
-        </View>
-
-        <View style={styles.formContainer}>
-          {/* Email Input */}
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Email Address</Text>
-            <TextInput
-              style={[styles.input, !!errorMsg.email && styles.inputError]}
-              placeholder="student_psych@cvsu.edu.ph"
-              value={email}
-              onChangeText={(text) => {
-                setEmail(text);
-                if (errorMsg.email) setErrorMsg(prev => ({ ...prev, email: '' }));
-              }}
-              autoCapitalize="none"
-              keyboardType="email-address"
-              placeholderTextColor="#999"
-              returnKeyType="next"
-              onSubmitEditing={() => passwordInputRef.current?.focus()}
-              blurOnSubmit={false}
-            />
-            {!!errorMsg.email && <Text style={styles.errorText}>{errorMsg.email}</Text>}
+      <KeyboardAvoidingView 
+        style={{ flex: 1 }} 
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+      >
+        <ScrollView 
+          contentContainerStyle={styles.scrollContent} 
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.headerContainer}>
+            <Text style={styles.title}>Welcome Back</Text>
+            <Text style={styles.subtitle}>Log in with your account.</Text>
           </View>
 
-          {/* Password Input */}
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Password</Text>
-            <View style={[styles.passwordContainer, !!errorMsg.password && styles.inputError]}>
+          <View style={styles.formContainer}>
+            {/* Email Input */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Email Address</Text>
               <TextInput
-                ref={passwordInputRef}
-                style={styles.passwordInput}
-                placeholder="***************"
-                value={password}
+                style={[styles.input, !!errorMsg.email && styles.inputError]}
+                placeholder="student_psych@cvsu.edu.ph"
+                value={email}
                 onChangeText={(text) => {
-                  setPassword(text);
-                  if (errorMsg.password) setErrorMsg(prev => ({ ...prev, password: '' }));
+                  setEmail(text);
+                  if (errorMsg.email) setErrorMsg(prev => ({ ...prev, email: '' }));
                 }}
-                secureTextEntry={!showPassword}
+                autoCapitalize="none"
+                keyboardType="email-address"
                 placeholderTextColor="#999"
-                returnKeyType="go"
-                onSubmitEditing={handleLogin}
+                returnKeyType="next"
+                onSubmitEditing={() => passwordInputRef.current?.focus()}
+                blurOnSubmit={false}
               />
-              <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeIcon}>
-                <Feather name={showPassword ? "eye" : "eye-off"} size={20} color="#666" />
-              </TouchableOpacity>
+              {!!errorMsg.email && <Text style={styles.errorText}>{errorMsg.email}</Text>}
             </View>
-            {!!errorMsg.password && <Text style={styles.errorText}>{errorMsg.password}</Text>}
-          </View>
 
-          <Pressable style={[styles.button, isLoading && styles.buttonDisabled]} onPress={handleLogin} disabled={isLoading}>
-            {isLoading ? <ActivityIndicator size="small" color={THEME.white} /> : <Text style={styles.buttonText}>Sign in</Text>}
-          </Pressable>
+            {/* Password Input */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Password</Text>
+              <View style={[styles.passwordContainer, !!errorMsg.password && styles.inputError]}>
+                <TextInput
+                  ref={passwordInputRef}
+                  style={styles.passwordInput}
+                  placeholder="***************"
+                  value={password}
+                  onChangeText={(text) => {
+                    setPassword(text);
+                    if (errorMsg.password) setErrorMsg(prev => ({ ...prev, password: '' }));
+                  }}
+                  secureTextEntry={!showPassword}
+                  placeholderTextColor="#999"
+                  returnKeyType="go"
+                  onSubmitEditing={handleLogin}
+                />
+                <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeIcon}>
+                  <Feather name={showPassword ? "eye" : "eye-off"} size={20} color="#666" />
+                </TouchableOpacity>
+              </View>
+              {!!errorMsg.password && <Text style={styles.errorText}>{errorMsg.password}</Text>}
+            </View>
 
-          <View style={styles.footer}>
-            <Text style={styles.footerText}>Don’t have an account? </Text>
-            <Link href="/(auth)/signup" asChild>
-              <Pressable disabled={isLoading}>
-                <Text style={styles.signUpLink}>Sign up.</Text>
-              </Pressable>
-            </Link>
+            <Pressable style={[styles.button, isLoading && styles.buttonDisabled]} onPress={handleLogin} disabled={isLoading}>
+              {isLoading ? <ActivityIndicator size="small" color={THEME.white} /> : <Text style={styles.buttonText}>Sign in</Text>}
+            </Pressable>
+
+            <View style={styles.footer}>
+              <Text style={styles.footerText}>Don’t have an account? </Text>
+              <Link href="/(auth)/signup" asChild>
+                <Pressable disabled={isLoading}>
+                  <Text style={styles.signUpLink}>Sign up.</Text>
+                </Pressable>
+              </Link>
+            </View>
           </View>
-        </View>
-      </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: THEME.white },
-  container: { flex: 1, paddingHorizontal: 24, justifyContent: 'center', backgroundColor: THEME.white },
+  // Changed container to scrollContent for proper centering in scrollview
+  scrollContent: { 
+    flexGrow: 1, 
+    paddingHorizontal: 24, 
+    justifyContent: 'center', 
+    backgroundColor: THEME.white 
+  },
   headerContainer: { marginBottom: 40, alignItems: 'center' },
   title: { fontSize: 28, fontWeight: 'bold', color: THEME.darkGreen, marginBottom: 8 },
   subtitle: { fontSize: 14, color: THEME.textGray },

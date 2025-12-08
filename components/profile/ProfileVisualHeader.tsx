@@ -1,9 +1,10 @@
 import { useAuth } from "@/lib/auth";
 import { FontAwesome5 } from "@expo/vector-icons";
-import React from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Image,
+  Modal, // Import Modal
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -18,6 +19,20 @@ interface Props {
 const ProfileVisualHeader = ({ onEditPress, isUploading = false }: Props) => {
   const { user } = useAuth();
 
+  // State for the success popup
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  
+  // Track previous uploading state
+  const wasUploading = useRef(isUploading);
+
+  useEffect(() => {
+    // If it WAS uploading and now is NOT, show the success modal
+    if (wasUploading.current && !isUploading) {
+      setShowSuccessModal(true);
+    }
+    wasUploading.current = isUploading;
+  }, [isUploading]);
+
   const profileImageUrl = user?.profile_picture;
   const firstNameInitial = user?.first_name?.charAt(0) || "U";
   const fullNameDisplay = user?.first_name
@@ -29,6 +44,33 @@ const ProfileVisualHeader = ({ onEditPress, isUploading = false }: Props) => {
 
   return (
     <View style={styles.container}>
+      {/* --- CUSTOM ALERT MODAL --- */}
+      <Modal
+        transparent={true}
+        visible={showSuccessModal}
+        animationType="fade"
+        onRequestClose={() => setShowSuccessModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalIconContainer}>
+              <FontAwesome5 name="check-circle" size={40} color="#10B981" />
+            </View>
+            <Text style={styles.modalTitle}>Upload Complete</Text>
+            <Text style={styles.modalMessage}>
+              Your profile picture has been successfully updated.
+            </Text>
+            
+            <TouchableOpacity 
+              style={styles.modalButton}
+              onPress={() => setShowSuccessModal(false)}
+            >
+              <Text style={styles.modalButtonText}>OK</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
       <View style={styles.card}>
         {/* Avatar Section */}
         <TouchableOpacity
@@ -92,17 +134,65 @@ const styles = StyleSheet.create({
   },
   card: {
     backgroundColor: "#3D365C",
-    borderRadius: 16, // UPDATED: Consistent 16px radius
+    borderRadius: 16,
     padding: 24,
     flexDirection: "row",
     alignItems: "center",
-
-    // Consistent Shadow
     shadowColor: "#3D365C",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 5,
+  },
+  // --- Modal Styles ---
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.6)", // Dim background
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  modalContent: {
+    width: "80%",
+    maxWidth: 320,
+    backgroundColor: "#FFF",
+    borderRadius: 20,
+    padding: 24,
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    elevation: 10,
+  },
+  modalIconContainer: {
+    marginBottom: 16,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+    color: "#333",
+    marginBottom: 8,
+    textAlign: "center",
+  },
+  modalMessage: {
+    fontSize: 14,
+    color: "#666",
+    textAlign: "center",
+    marginBottom: 24,
+    lineHeight: 20,
+  },
+  modalButton: {
+    backgroundColor: "#3D365C", // Theme color
+    paddingVertical: 12,
+    paddingHorizontal: 32,
+    borderRadius: 25,
+    width: "100%",
+    alignItems: "center",
+  },
+  modalButtonText: {
+    color: "#FFF",
+    fontSize: 16,
+    fontWeight: "bold",
   },
   // --- Avatar ---
   avatarWrapper: {
@@ -122,7 +212,7 @@ const styles = StyleSheet.create({
     width: 84,
     height: 84,
     borderRadius: 42,
-    backgroundColor: "#FF6B6B", // Vibrant Coral
+    backgroundColor: "#FF6B6B", 
     justifyContent: "center",
     alignItems: "center",
     borderWidth: 3,
@@ -144,7 +234,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     borderWidth: 2,
-    borderColor: "#3D365C", // Blend with bg
+    borderColor: "#3D365C",
   },
   loadingOverlay: {
     position: "absolute",
@@ -183,12 +273,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     alignSelf: "flex-start",
     borderWidth: 1,
-    borderColor: "rgba(255,215,0,0.1)", // Subtle gold border
+    borderColor: "rgba(255,215,0,0.1)",
   },
   badgeText: {
     fontSize: 11,
     fontWeight: "800",
-    color: "#FFD700", // Gold
+    color: "#FFD700",
     letterSpacing: 0.8,
     textTransform: "uppercase",
   },
