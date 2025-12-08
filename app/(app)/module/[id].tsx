@@ -1,16 +1,18 @@
-import { 
-  getModuleById, 
-  hasTakenAssessment, 
-  listAssessmentsByModule, 
-  updateModuleProgress, 
-  startStudySession, 
-  updateStudySession, 
-  getModuleProgress
+import {
+  getModuleById,
+  getModuleProgress,
+  hasTakenAssessment,
+  listAssessmentsByModule,
+  startStudySession,
+  updateModuleProgress,
+  updateStudySession
 } from '@/lib/api';
 import { Feather, Ionicons } from '@expo/vector-icons';
 import { router, Stack, useLocalSearchParams, useNavigation } from 'expo-router';
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import {
+  ActivityIndicator,
+  Alert,
   Dimensions,
   NativeScrollEvent,
   NativeSyntheticEvent,
@@ -21,11 +23,11 @@ import {
   StatusBar,
   StyleSheet,
   Text,
-  ActivityIndicator,
-  View,
-  Alert // Import Alert for pop-up
+  View
 } from 'react-native';
-import Markdown from 'react-native-markdown-display'; 
+import Markdown from 'react-native-markdown-display';
+import type { MixedStyleDeclaration } from 'react-native-render-html';
+import RenderHtml from 'react-native-render-html';
 import { Fonts } from '../../../constants/cognify-theme';
 
 const { width } = Dimensions.get('window');
@@ -40,6 +42,7 @@ export default function ModuleReadingScreen() {
   const [moduleInputType, setModuleInputType] = useState<string>('');
   const [moduleMaterialUrl, setModuleMaterialUrl] = useState<string>('');
   const [moduleContent, setModuleContent] = useState<string>('');
+  const [isHtmlContent, setIsHtmlContent] = useState(false);
   
   // Quiz State
   const [hasVerifiedAssessment, setHasVerifiedAssessment] = useState(false);
@@ -83,7 +86,12 @@ export default function ModuleReadingScreen() {
           setModuleAuthor(mod.author || mod.purpose || '');
           setModuleInputType(mod.input_type || '');
           setModuleMaterialUrl(mod.material_url || '');
-          setModuleContent(mod.content || '');
+          
+          // Check if content is HTML
+          const content = mod.content || '';
+          const isHtml = /<[^>]+>/.test(content);
+          setIsHtmlContent(isHtml);
+          setModuleContent(content);
         }
       } catch (e) {}
 
@@ -98,8 +106,8 @@ export default function ModuleReadingScreen() {
         }
       } catch {}
 
-      // Load Assessment (Correctly filters using backend param)
-       try {
+      // Load Assessment
+      try {
         const assessments = await listAssessmentsByModule(String(id));
         const first = Array.isArray(assessments) ? assessments[0] : undefined;
         if (mounted && first) {
@@ -107,7 +115,6 @@ export default function ModuleReadingScreen() {
           setAssessmentId(first.id);
           const ok: any = await hasTakenAssessment(first.id);
 
-          // Normalize different possible API responses to a boolean
           let taken = false;
           if (typeof ok === 'boolean') {
             taken = ok;
@@ -163,19 +170,18 @@ export default function ModuleReadingScreen() {
         updateModuleProgress(String(id), subjectId, pctInt, status).catch(() => {});
         if (sessionIdRef.current) updateStudySession(sessionIdRef.current, 0, 0, false).catch(() => {});
 
-        // [FIX] POP-UP ALERT WHEN DONE
         if (pctInt >= 100 && hasVerifiedAssessment && !hasTakenThisAssessment) {
-            Alert.alert(
-                "Module Completed! 🎉",
-                "You have finished reading. Would you like to take the assessment now?",
-                [
-                    { text: "Later", style: "cancel" },
-                    { 
-                      text: "Take Quiz", 
-                      onPress: () => router.push({ pathname: '/(app)/quiz/[id]', params: { id: assessmentId } }) 
-                    }
-                ]
-            );
+          Alert.alert(
+            "Module Completed! 🎉",
+            "You have finished reading. Would you like to take the assessment now?",
+            [
+              { text: "Later", style: "cancel" },
+              { 
+                text: "Take Quiz", 
+                onPress: () => router.push({ pathname: '/(app)/quiz/[id]', params: { id: assessmentId } }) 
+              }
+            ]
+          );
         }
       }
     }
@@ -183,7 +189,7 @@ export default function ModuleReadingScreen() {
 
   const checkScrollability = (contentH: number, layoutH: number) => {
     if (contentH > 0 && layoutH > 0 && contentH <= layoutH + 20) {
-         handleProgressUpdate(1);
+      handleProgressUpdate(1);
     }
   };
 
@@ -198,16 +204,15 @@ export default function ModuleReadingScreen() {
 
     if (scrollableHeight > 0) {
       if (scrollableHeight - contentOffset.y <= 50) {
-          handleProgressUpdate(1);
+        handleProgressUpdate(1);
       } else {
-          handleProgressUpdate(contentOffset.y / scrollableHeight);
+        handleProgressUpdate(contentOffset.y / scrollableHeight);
       }
     } else {
       handleProgressUpdate(1);
     }
   };
 
-  // ... (Theme setup same as before)
   const toggleTheme = () => setIsDarkMode(!isDarkMode);
   const inputType = moduleInputType?.toLowerCase();
   const isPdf = inputType === 'pdf' || (!inputType && moduleMaterialUrl?.toLowerCase().endsWith('.pdf'));
@@ -215,7 +220,7 @@ export default function ModuleReadingScreen() {
   const pdfSource = moduleMaterialUrl ? { uri: moduleMaterialUrl, cache: true } : undefined;
 
   const themeColors = {
-    background: isDarkMode ? '#1c1c1cff' : '#ffffffff',
+    background: isDarkMode ? '#1c1c1c' : '#ffffff',
     textPrimary: isDarkMode ? '#FFFFFF' : '#000000',
     textSecondary: isDarkMode ? '#B0B0B0' : '#666666',
     cardBg: isDarkMode ? '#2C2C2C' : '#F4F6F8',
@@ -232,9 +237,49 @@ export default function ModuleReadingScreen() {
     code_inline: { backgroundColor: themeColors.codeBg, color: themeColors.textPrimary, borderRadius: 4 },
   };
 
+  const htmlStyles = {
+    body: {
+      color: themeColors.textPrimary,
+      fontFamily: Fonts.poppinsRegular,
+      fontSize: 16,
+      lineHeight: 26,
+    },
+    h1: {
+      fontSize: 24,
+      fontFamily: Fonts.poppinsMedium,
+      color: themeColors.fill,
+      marginTop: 20,
+      marginBottom: 10,
+    },
+    h2: {
+      fontSize: 20,
+      fontFamily: Fonts.poppinsMedium,
+      color: themeColors.textPrimary,
+      marginTop: 15,
+      marginBottom: 8,
+    },
+    p: {
+      marginBottom: 12,
+      textAlign: 'justify' as const,
+      lineHeight: 26,
+    },
+    strong: {
+      fontFamily: Fonts.poppinsMedium,
+      fontWeight: '600',
+    },
+    code: {
+      backgroundColor: themeColors.codeBg,
+      color: themeColors.textPrimary,
+      borderRadius: 4,
+      paddingHorizontal: 6,
+      paddingVertical: 2,
+      fontFamily: 'monospace',
+    },
+  } satisfies Readonly<Record<string, MixedStyleDeclaration>>;
+
   if (loading) {
     return (
-      <SafeAreaView style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+      <SafeAreaView style={[styles.container, { justifyContent: 'center', alignItems: 'center', backgroundColor: themeColors.background }]}>
         <ActivityIndicator size="large" color={themeColors.fill} />
       </SafeAreaView>
     );
@@ -261,9 +306,9 @@ export default function ModuleReadingScreen() {
             source={pdfSource}
             onLoadComplete={(numberOfPages: number) => setPdfTotalPages(numberOfPages)}
             onPageChanged={(page: number, numberOfPages: number) => {
-               setPdfCurrentPage(page);
-               setPdfTotalPages(numberOfPages);
-               handleProgressUpdate(page / numberOfPages);
+              setPdfCurrentPage(page);
+              setPdfTotalPages(numberOfPages);
+              handleProgressUpdate(page / numberOfPages);
             }}
             style={styles.pdf}
             trustAllCerts={false}
@@ -276,48 +321,55 @@ export default function ModuleReadingScreen() {
           scrollEventThrottle={16}
           showsVerticalScrollIndicator={false}
           onLayout={(e) => {
-             const h = e.nativeEvent.layout.height;
-             scrollViewHeightRef.current = h;
-             checkScrollability(contentHeightRef.current, h);
+            const h = e.nativeEvent.layout.height;
+            scrollViewHeightRef.current = h;
+            checkScrollability(contentHeightRef.current, h);
           }}
           onContentSizeChange={(w, h) => {
-             contentHeightRef.current = h;
-             checkScrollability(h, scrollViewHeightRef.current);
+            contentHeightRef.current = h;
+            checkScrollability(h, scrollViewHeightRef.current);
           }}
         >
           <Text style={[styles.title, { color: themeColors.textPrimary }]}>{moduleTitle || 'Module'}</Text>
           {moduleAuthor ? <Text style={[styles.author, { color: themeColors.textSecondary }]}>{moduleAuthor}</Text> : null}
 
           {isPdf && Platform.OS === 'web' ? (
-             <View style={{ height: width * 1.5, borderRadius: 8, overflow: 'hidden' }}>
-               <iframe src={`https://docs.google.com/gview?embedded=true&url=${encodeURIComponent(moduleMaterialUrl)}`} style={{ width: '100%', height: '100%', border: 'none' } as any} />
-             </View>
+            <View style={{ height: width * 1.5, borderRadius: 8, overflow: 'hidden' }}>
+              <iframe src={`https://docs.google.com/gview?embedded=true&url=${encodeURIComponent(moduleMaterialUrl)}`} style={{ width: '100%', height: '100%', border: 'none' } as any} />
+            </View>
+          ) : isHtmlContent ? (
+            <RenderHtml
+              contentWidth={width - 48}
+              source={{ html: moduleContent }}
+              tagsStyles={htmlStyles}
+              baseStyle={{ color: themeColors.textPrimary }}
+            />
           ) : (
-             <Markdown style={markdownStyles}>
-                {moduleContent || 'No content available.'}
-             </Markdown>
+            <Markdown style={markdownStyles}>
+              {moduleContent || 'No content available.'}
+            </Markdown>
           )}
 
-          {/* ASSESSMENT CARD - Visible if assessment exists */}
+          {/* Assessment Card */}
           {hasVerifiedAssessment && (
             <View style={[styles.quizSection, { backgroundColor: themeColors.cardBg }]}>
               <View style={styles.quizInfo}>
-                  <Text style={[styles.quizTitle, { color: themeColors.textPrimary }]}>
-                      Module Assessment
-                  </Text>
-                  <Text style={[styles.quizDesc, { color: themeColors.textSecondary }]}>
-                      {hasTakenThisAssessment 
-                          ? "You've already completed this quiz." 
-                          : "Test your understanding of this module."}
-                  </Text>
+                <Text style={[styles.quizTitle, { color: themeColors.textPrimary }]}>
+                  Module Assessment
+                </Text>
+                <Text style={[styles.quizDesc, { color: themeColors.textSecondary }]}>
+                  {hasTakenThisAssessment 
+                    ? "You've already completed this quiz." 
+                    : "Test your understanding of this module."}
+                </Text>
               </View>
               
               <Pressable 
-                  style={[styles.quizButton, { opacity: hasTakenThisAssessment ? 0.7 : 1 }]} 
-                  onPress={() => router.push({ pathname: '/(app)/quiz/[id]', params: { id: assessmentId } })}
+                style={[styles.quizButton, { opacity: hasTakenThisAssessment ? 0.7 : 1 }]} 
+                onPress={() => router.push({ pathname: '/(app)/quiz/[id]', params: { id: assessmentId } })}
               >
                 <Text style={styles.quizButtonText}>
-                    {hasTakenThisAssessment ? 'Retake' : 'Start Quiz'}
+                  {hasTakenThisAssessment ? 'Retake' : 'Start Quiz'}
                 </Text>
                 <Ionicons name="arrow-forward" size={18} color="#FFF" />
               </Pressable>
@@ -332,8 +384,8 @@ export default function ModuleReadingScreen() {
         <View style={styles.progressInfo}>
           <Text style={{ fontFamily: Fonts.poppinsMedium, color: themeColors.fill }}>
             {isPdf && PdfComponent 
-                ? `Page ${pdfCurrentPage} of ${pdfTotalPages}` 
-                : `${Math.round(readingProgress * 100)}% Complete`}
+              ? `Page ${pdfCurrentPage} of ${pdfTotalPages}` 
+              : `${Math.round(readingProgress * 100)}% Complete`}
           </Text>
         </View>
         <View style={styles.progressBarTrack}>

@@ -61,7 +61,7 @@ export default function ProgressScreen() {
         {/* <MotivationCard /> */}
         <ReadinessCard data={MOCK_READINESS_DATA} />
         <ProgressOverviewCard />
-        <AchievementsCard />
+        {/* <AchievementsCard /> */}
 
       </ScrollView>
     </SafeAreaView>

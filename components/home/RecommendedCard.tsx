@@ -1,14 +1,12 @@
 import { router } from "expo-router";
 import React, { useEffect, useState } from "react";
 import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from "react-native";
-// Assuming FONT_FAMILY and PRIMARY_COLOR are correctly imported
 import { FONT_FAMILY, PRIMARY_COLOR } from "@/constants/cognify-theme";
 import { getDiagnosticRecommendations, getSubjectTopics, listSubjects } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { storage } from "@/lib/storage";
 import { useFocusEffect } from "@react-navigation/native";
 
-// --- NEW INTERFACE FOR PROPS ---
 interface RecommendedCardProps {
   hasTakenAssessment?: boolean;
   weakestSubject?: string;
@@ -25,30 +23,51 @@ export default function RecommendedCard({
   const [recommendedSubjects, setRecommendedSubjects] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Strip " - Diagnostic" suffix from subject names
+  const cleanSubjectName = (name: string): string => {
+    return String(name || "").replace(/\s*-\s*Diagnostic\s*$/i, "").trim();
+  };
+
   const findSubjectIdForTitle = async (key: string): Promise<string | null> => {
+    const cleanKey = cleanSubjectName(key);
     try {
       const items = await listSubjects();
-      const lower = String(key || "").toLowerCase();
+      const lower = cleanKey.toLowerCase();
+      
       for (const it of items as any[]) {
         const id = String(it?.id ?? "");
-        const title = String(it?.title ?? "");
+        const title = cleanSubjectName(String(it?.title ?? ""));
+        
         if (!id && !title) continue;
-        if (id === key) return id;
+        
+        // Direct ID match
+        if (id === cleanKey) return id;
+        
+        // Title match (case-insensitive)
         if (title && title.toLowerCase() === lower) return id || null;
       }
     } catch {}
+    
+    // Fallback: try fetching directly
     try {
-      const s = await getSubjectTopics(String(key));
+      const s = await getSubjectTopics(cleanKey);
       const sid = String(s?.id ?? "");
       if (sid) return sid;
     } catch {}
+    
     return null;
   };
 
   const navigateToSubject = async (title: string) => {
     const id = await findSubjectIdForTitle(title);
     if (id) {
-      router.push({ pathname: "/(app)/subject/[id]", params: { id, subjectTitle: title } });
+      const cleanTitle = cleanSubjectName(title);
+      router.push({ 
+        pathname: "/(app)/subject/[id]", 
+        params: { id, subjectTitle: cleanTitle } 
+      });
+    } else {
+      console.warn(`Could not find subject ID for: ${title}`);
     }
   };
 
@@ -58,9 +77,12 @@ export default function RecommendedCard({
       const byId = new Map<string, string>();
       const byTitleLower = new Map<string, string>();
       const byTitleLowerToId = new Map<string, string>();
+      
       items.forEach((it: any) => {
         const id = String(it?.id ?? "");
-        const title = String(it?.title ?? "");
+        const rawTitle = String(it?.title ?? "");
+        const title = cleanSubjectName(rawTitle);
+        
         if (id) byId.set(id, title);
         if (title) {
           const lower = title.toLowerCase();
@@ -71,28 +93,34 @@ export default function RecommendedCard({
 
       const resolved = await Promise.all(
         subjects.map(async (s) => {
-          const key = String(s);
-          const lower = key.toLowerCase();
-          const id = byId.has(key) ? key : (byTitleLowerToId.get(lower) ?? null);
+          const cleanKey = cleanSubjectName(String(s));
+          const lower = cleanKey.toLowerCase();
+          
+          // Try ID lookup
+          const id = byId.has(cleanKey) ? cleanKey : (byTitleLowerToId.get(lower) ?? null);
+          
           if (id) {
             try {
               const d = await getSubjectTopics(id);
-              return String(d?.title ?? byId.get(id) ?? key);
+              return cleanSubjectName(String(d?.title ?? byId.get(id) ?? cleanKey));
             } catch {
-              return byId.get(id) ?? key;
+              return byId.get(id) ?? cleanKey;
             }
           }
+          
+          // Try direct fetch as fallback
           try {
-            const d = await getSubjectTopics(key);
-            return String(d?.title ?? byTitleLower.get(lower) ?? key);
+            const d = await getSubjectTopics(cleanKey);
+            return cleanSubjectName(String(d?.title ?? byTitleLower.get(lower) ?? cleanKey));
           } catch {
-            return byTitleLower.get(lower) ?? key;
+            return byTitleLower.get(lower) ?? cleanKey;
           }
         })
       );
+      
       return resolved;
     } catch {
-      return subjects;
+      return subjects.map(cleanSubjectName);
     }
   };
 
@@ -105,11 +133,16 @@ export default function RecommendedCard({
           const rec = Array.isArray(data?.recommendedSubjects) ? data.recommendedSubjects : [];
           const scores = Array.isArray(data?.subjectScores) ? data.subjectScores : [];
           let subjects: string[] = [];
-          if (rec.length) subjects = rec.slice(0, 2);
-          else if (scores.length) {
-            const sorted = scores.slice().sort((a: any, b: any) => (a.correct / a.total) - (b.correct / b.total));
+          
+          if (rec.length) {
+            subjects = rec.slice(0, 2);
+          } else if (scores.length) {
+            const sorted = scores.slice().sort((a: any, b: any) => 
+              (a.correct / a.total) - (b.correct / b.total)
+            );
             subjects = sorted.slice(0, 2).map((s: any) => String(s.subject));
           }
+          
           if (subjects.length) {
             const titles = await resolveSubjectTitles(subjects);
             setRecommendedSubjects(titles);
@@ -118,21 +151,26 @@ export default function RecommendedCard({
           }
         }
 
-        // Fallback to per-user local storage only
+        // Fallback to local storage
         if (!user?.id) return;
         const key = `diagnostic_assessment_results:${user.id}`;
         const raw = await storage.getItem(key);
         if (!raw) return;
+        
         const parsed = JSON.parse(raw);
         const recommendedFromBackend: string[] | undefined = parsed.recommendedSubjects;
         const scores: { subject: string; correct: number; total: number }[] = parsed.subjectScores || [];
         let subjects: string[] = [];
+        
         if (recommendedFromBackend && recommendedFromBackend.length > 0) {
           subjects = recommendedFromBackend.slice(0, 2);
         } else if (scores.length > 0) {
-          const sorted = scores.slice().sort((a, b) => (a.correct / a.total) - (b.correct / b.total));
+          const sorted = scores.slice().sort((a, b) => 
+            (a.correct / a.total) - (b.correct / b.total)
+          );
           subjects = sorted.slice(0, 2).map(s => s.subject);
         }
+        
         if (subjects.length === 0) return;
         const titles = await resolveSubjectTitles(subjects);
         setRecommendedSubjects(titles);
@@ -153,25 +191,33 @@ export default function RecommendedCard({
         try {
           setLoading(true);
           if (!user?.id) return;
+          
           const key = `diagnostic_assessment_results:${user.id}`;
           const raw = await storage.getItem(key);
           if (!raw || !active) return;
+          
           const parsed = JSON.parse(raw);
           const recommendedFromBackend: string[] | undefined = parsed.recommendedSubjects;
           const scores: { subject: string; correct: number; total: number }[] = parsed.subjectScores || [];
           let subjects: string[] = [];
+          
           if (recommendedFromBackend && recommendedFromBackend.length > 0) {
             subjects = recommendedFromBackend.slice(0, 2);
           } else if (scores.length > 0) {
-            const sorted = scores.slice().sort((a, b) => (a.correct / a.total) - (b.correct / b.total));
+            const sorted = scores.slice().sort((a, b) => 
+              (a.correct / a.total) - (b.correct / b.total)
+            );
             subjects = sorted.slice(0, 2).map(s => s.subject);
           }
+          
           if (subjects.length > 0) {
             const titles = await resolveSubjectTitles(subjects);
             setRecommendedSubjects(titles);
             setLocalHasTaken(true);
           }
-        } catch (e) {} finally {
+        } catch (e) {
+          console.error('Refresh failed', e);
+        } finally {
           if (active) setLoading(false);
         }
       };
@@ -181,12 +227,14 @@ export default function RecommendedCard({
       };
     }, [user?.id])
   );
-  // --- CONTENT RENDER LOGIC ---
+
   let content;
   let title;
 
   const effectiveHasTaken = hasTakenAssessment ?? localHasTaken;
-  const effectiveSubjects = recommendedSubjects.length > 0 ? recommendedSubjects : (weakestSubject ? [weakestSubject] : []);
+  const effectiveSubjects = recommendedSubjects.length > 0 
+    ? recommendedSubjects 
+    : (weakestSubject ? [cleanSubjectName(weakestSubject)] : []);
 
   if (loading) {
     title = "Loading";
@@ -196,18 +244,15 @@ export default function RecommendedCard({
       </View>
     );
   } else if (!effectiveHasTaken) {
-    // STATE 1: HINDI PA NAKAKAPAG-TAKE (NO SCORE)
     title = "Discover Your Learning Path";
     content = (
       <View style={styles.noAssessmentCard}>
         <Text style={styles.noAssessmentText}>
           Take Diagnostic to help us recommend the important subjects for your review!
         </Text>
-        
-        </View>
+      </View>
     );
   } else {
-    // STATE 2: NAKAPAG-TAKE NA (MAY SCORE at RECOMMENDATION)
     title = "Recommend for You:";
     content = (
       <View>
@@ -246,7 +291,6 @@ export default function RecommendedCard({
     );
   }
 
-  // --- MAIN RENDER ---
   return (
     <View style={styles.section}>
       <Text style={styles.sectionTitle}>{title}</Text>
@@ -255,7 +299,6 @@ export default function RecommendedCard({
   );
 }
 
-// --- STYLES ---
 const styles = StyleSheet.create({
   section: { marginTop: 24 },
   sectionTitle: {
@@ -271,8 +314,6 @@ const styles = StyleSheet.create({
     color: "#666",
     marginBottom: 4,
   },
-  
-  // --- Recommended Card Styles (EXISTING) ---
   recommendedCard: {
     backgroundColor: "#FFF",
     borderRadius: 16,
@@ -343,15 +384,13 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   badgeText: {
-    fontFamily: "Poppins-Medium", // Assuming this is defined
+    fontFamily: "Poppins-Medium",
     color: "#000000",
     fontSize: 10,
     letterSpacing: 0.5,
   },
-  
-  // --- New Styles for No Assessment State ---
   noAssessmentCard: {
-    backgroundColor: "#F0F0FF", // Lighter background to differentiate
+    backgroundColor: "#F0F0FF",
     borderRadius: 16,
     padding: 20,
     borderWidth: 1,
@@ -366,22 +405,5 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 15,
     lineHeight: 22,
-  },
-  takeAssessmentButton: {
-    backgroundColor: PRIMARY_COLOR, // Use primary color for CTA
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 10,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 3,
-    elevation: 4,
-  },
-  takeAssessmentButtonText: {
-    fontFamily: FONT_FAMILY,
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#FFFFFF",
   },
 });

@@ -3,6 +3,8 @@ import {
   getSubjectTopics,
   listModulesBySubject,
   getModuleProgress,
+  listAssessmentsByModule,
+  hasTakenAssessment,
 } from "@/lib/api";
 import { ModuleListItem, Subject } from "@/lib/types";
 import { FontAwesome, Ionicons } from "@expo/vector-icons";
@@ -79,17 +81,16 @@ export default function SubjectModulesScreen() {
       const modulesRes = await listModulesBySubject(id);
       const rawList = Array.isArray(modulesRes) ? modulesRes : [];
 
-      // 3. Map & Fetch Progress in Parallel
+      // 3. Map & Fetch Progress + Assessment Status in Parallel
       const mappedModules = await Promise.all(
         rawList.map(async (mod: any) => {
-          // [FIX] Robust Mapping: Handle flat or nested 'data' structure
+          // Handle flat or nested 'data' structure
           const item = mod.data || mod;
           const moduleId = String(item.id || item._id || mod.id || "");
 
-          // [FIX] Real Progress Check (Replaces global hack)
+          // Fetch Progress
           let progress = 0;
           try {
-            // Check global cache first for speed, then fall back to storage
             const cached = (global as any).MODULE_PROGRESS?.[moduleId];
             if (cached !== undefined) {
               progress = cached;
@@ -99,15 +100,46 @@ export default function SubjectModulesScreen() {
             }
           } catch {}
 
+          // [FIX] Check if quiz/assessment was taken
+          let hasCompletedQuiz = false;
+          try {
+            const assessments = await listAssessmentsByModule(moduleId);
+            const firstAssessment = Array.isArray(assessments) ? assessments[0] : undefined;
+            
+            if (firstAssessment) {
+              const result: any = await hasTakenAssessment(firstAssessment.id);
+              
+              // Parse different response formats
+              if (typeof result === 'boolean') {
+                hasCompletedQuiz = result;
+              } else if (typeof result === 'number') {
+                hasCompletedQuiz = result === 1;
+              } else if (typeof result === 'string') {
+                hasCompletedQuiz = result.toLowerCase() === 'true' || result === '1';
+              } else if (result && typeof result === 'object') {
+                hasCompletedQuiz = Boolean(
+                  result.taken ?? 
+                  result.has_taken ?? 
+                  result.data ?? 
+                  result.is_taken ?? 
+                  result.result ?? 
+                  false
+                );
+              }
+            }
+          } catch (error) {
+            // If no assessment exists or error occurs, leave as false
+            console.log(`No assessment or error for module ${moduleId}`);
+          }
+
           return {
             id: moduleId,
             title: String(item.title || "Untitled Module"),
-            // [FIX] Correctly map Author field from backend
             author: String(
               item.author || item.purpose || item.description || "Instructor"
             ),
             progress: progress,
-            quizTaken: progress >= 100, // Logic can be refined if quiz is separate
+            quizTaken: hasCompletedQuiz, // [FIX] Now based on actual quiz completion
             lectureContentUrl: item.material_url ?? null,
           } as ModuleListItem;
         })
@@ -130,7 +162,6 @@ export default function SubjectModulesScreen() {
     }, [fetchTopics])
   );
 
-  // ... (Header and Overview logic remains the same)
   const renderHeader = () => (
     <View style={styles.headerContainer}>
       <Pressable
@@ -167,7 +198,6 @@ export default function SubjectModulesScreen() {
           <Text style={styles.overviewLabelText}>You can do it!</Text>
         </View>
         <View style={styles.overviewIllustrationWrap}>
-          {/* Ensure image exists or handle error */}
           <View style={styles.overviewIllustrationCircle}>
             <Image
               source={require("@/assets/images/brain.png")}
@@ -194,14 +224,14 @@ export default function SubjectModulesScreen() {
     item: ModuleListItem;
     index: number;
   }) => {
-    const isCompleted = item.progress >= 100;
-    const showQuizPending = item.progress < 100 && item.progress >= 90;
+    // [FIX] Checkbox only checks when quiz is taken
+    const isCompleted = item.quizTaken;
+    const showQuizPending = item.progress >= 90 && !item.quizTaken;
 
     return (
       <Pressable
         style={[styles.card, { backgroundColor: "#FFFFFF" }]}
         onPress={() => {
-          // [FIX] Ensure ID is passed securely
           if (item.id) {
             router.push({
               pathname: "/(app)/module/[id]",
@@ -301,7 +331,6 @@ export default function SubjectModulesScreen() {
 }
 
 const styles = StyleSheet.create({
-  // ... (Keep your existing styles exactly as they were in the previous file)
   container: { flex: 1, backgroundColor: "#FFFFFF" },
   loadingContainer: {
     flex: 1,
